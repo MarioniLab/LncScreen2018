@@ -96,14 +96,42 @@ filtered <- out[keep,]
 
 # Normalization for efficiency biases
 
-We normalize out trended efficiency biases, under the assumption that most histone marking does _not_ change upon lncRNA knockdown.
+## Computing TMM factors
+
+We normalize out efficiency biases, under the assumption that most histone marking does _not_ change upon lncRNA knockdown.
+
+```{r}
+filtered <- normOffsets(filtered)
+colData(filtered)[,c("totals", "norm.factors")]
+```
+
+We can create some MA plots using the larger bins to examine the normalization factors, especially relative to background.
+
+```{r}
+library(edgeR)
+tmp <- asDGEList(bins)
+adjc <- cpm(tmp, log=TRUE, prior.count=0.5)
+average <- aveLogCPM(tmp)
+norm.factors <- filtered$norm.factors
+
+par(mfrow=c(4, 2))
+for (x in 2:ncol(adjc)) {
+    smoothScatter(average, adjc[,x]-adjc[,1], xlab="Average", 
+        ylab=sprintf("M (%i vs 1)", x))
+    abline(h=log2(norm.factors[x]/norm.factors[1]), col="red", lty=2)        
+}
+```
+
+## Computing trended offsets
+
+We take it to the next level and normalize out trended biases.
 
 ```{r}
 filtered <- normOffsets(filtered, type="loess")
 head(assay(filtered, "offset"))
 ```
 
-We can create some MA plots to examine the behaviour of the normalization factors.
+We can create some MA plots to check that we've correctly removed the bias.
 
 ```{r}
 library(edgeR)
@@ -118,14 +146,17 @@ for (x in 2:ncol(adjc)) {
 }
 ```
 
+## Creating MDS plots
+
 We can also use the adjusted log-coverage to create MDS plots.
 
 ```{r}
 par(mfrow=c(1,3))
 labels <- paste0(treatment, ".", batch) 
+col <- c("blue", "orange", "red", "darkgreen")[as.integer(factor(treatment))]
 for (x in c(1000, 10000, 100000)) {
     plotMDS(adjc, top=x, main=sprintf("Top %i windows", x),
-        labels=labels)
+        labels=labels, col=col)
 }
 ```
 
