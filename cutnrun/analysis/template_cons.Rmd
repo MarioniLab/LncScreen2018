@@ -70,15 +70,35 @@ We examine the number of regions that change, and in which direction.
 table(out$table$FDR <= 0.05, out$table$direction)
 ```
 
+We also get the best log-fold changes in each region.
+
+```{r}
+best <- getBestTest(unlist(out$id), do.call(rbind, all.rnai))
+head(best)
+```
+
+Adding annotation.
+
+```{r}
+library(org.Hs.eg.db)
+library(EnsDb.Hsapiens.v86)
+fiddling <- out$region
+seqlevels(fiddling) <- sub("^chr", "", seqlevels(fiddling))
+suppressWarnings({
+    surrounds <- detailRanges(orgdb=org.Hs.eg.db, txdb=EnsDb.Hsapiens.v86, 
+        fiddling, key.field="ENSEMBL")
+})
+```
+
 We save this result to file.
 
 ```{r}
-best <- getBestTest(unlist(out$id), do.call(rbind, all.rnai)
 output <- data.frame(as.data.frame(out$region)[,1:3],
-    out$table, Best.logFC=best$logFC)
+    out$table, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
 write.table(file="RNAi_h3k4me3_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
+head(output)
 ```
 
 Also the significant hits to a BED file for viewing.
@@ -105,12 +125,18 @@ We examine the number of regions that change, and in which direction.
 table(out$table$FDR <= 0.05, out$table$direction)
 ```
 
-We save this result to file.
+We also get the best log-fold changes in each region.
 
 ```{r}
 best <- getBestTest(unlist(out$id), do.call(rbind, all.lna))
+head(best)
+```
+
+We save this result to file (no need to recompute annotation, as the regions are the same).
+
+```{r}
 output <- data.frame(as.data.frame(out$region)[,1:3],
-    out$table, Best.logFC=best$logFC)
+    out$table, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
 write.table(file="LNA_h3k4me3_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
@@ -145,7 +171,7 @@ We save this result to file.
 ```{r}
 best <- getBestTest(unlist(out$id), do.call(rbind, all.combined))
 output <- data.frame(as.data.frame(out$region)[,1:3],
-    out$table, Best.logFC=best$logFC)
+    out$table, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
 write.table(file="Both_h3k4me3_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
@@ -167,7 +193,6 @@ export(con='Both_h3k4me3.bed', db.regions[out$table$FDR<=0.05])
 We obtain genic regions from the Ensembl annotation:
 
 ```{r}
-library(EnsDb.Hsapiens.v86)
 hs.genes <- genes(EnsDb.Hsapiens.v86)
 length(hs.genes)
 ```
@@ -184,6 +209,20 @@ Getting the gene symbols.
 ```{r}
 anno <- data.frame(Ensembl=hs.genes$gene_id, Symbol=hs.genes$gene_name)
 head(anno)   
+```
+
+We also create a function to consolidate the best scores across sizes.
+
+```{r}
+allBest <- function(ids, results, FUN=getBestOverlaps) {
+    out <- mapply(FUN=FUN, ids, results, SIMPLIFY=FALSE)
+    pvals <- lapply(out, "[[", "PValue")
+    lfcs <- lapply(out, "[[", "logFC")
+    all.p <- do.call(cbind, pvals)
+    all.p[is.na(all.p)] <- 1
+    i <- max.col(-all.p)
+    unname(do.call(cbind, lfcs)[cbind(seq_along(i), i)])
+}
 ```
 
 ## RNAi
@@ -205,11 +244,11 @@ table(out$table$FDR <= 0.05, out$table$direction)
 We save this result to file.
 
 ```{r}
-output <- data.frame(anno, out$table)
+output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.rnai))
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
 write.table(file="RNAi_h3k4me3_genes.tsv", output,
-    row.names=FALSE, sep="\t", quote=FALSE)        
+    row.names=FALSE, sep="\t", quote=FALSE)
 ```
 
 ## LNA
@@ -231,7 +270,7 @@ table(out$table$FDR <= 0.05, out$table$direction)
 We save this result to file.
 
 ```{r}
-output <- data.frame(anno, out$table)
+output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.lna))
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
 write.table(file="LNA_h3k4me3_genes.tsv", output,
@@ -257,7 +296,7 @@ table(out$table$FDR <= 0.05, out$table$direction)
 We save this result to file.
 
 ```{r}
-output <- data.frame(anno, out$table)
+output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.combined))
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
 write.table(file="Both_h3k4me3_genes.tsv", output,
