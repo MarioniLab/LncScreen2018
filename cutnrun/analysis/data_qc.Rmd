@@ -1,0 +1,100 @@
+---
+title: Quality control on the cut-n-run data
+author: Aaron Lun
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    fig_caption: false
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(BiocStyle)
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+```
+
+# Setting up the data
+
+Defining the BAM files to use here:
+
+```{r}
+bam.files <- list.files("../bam", full=TRUE, pattern="\\.bam$")
+prefixes <- sub("\\.bam$", "", basename(bam.files))
+prefixes
+```
+
+# Getting read alignment statistics
+
+Reporting alignment statistics for each file:
+
+```{r}
+library(Rsamtools)
+diagnostics <- list()
+for (idx in seq_along(bam.files)) {
+	bam <- bam.files[idx]
+    everything <- scanBam(bam.files[idx], param=ScanBamParam(
+        what=c("mapq", "flag")))[[1]]
+
+    total <- length(everything$flag)
+    mapped <- bitwAnd(everything$flag, 0x4)==0
+    marked <- bitwAnd(everything$flag, 0x400)!=0
+    filtered <- everything$mapq >= 10
+    survivor <- filtered & !marked
+                
+    diagnostics[[prefixes[idx]]] <- c(Total=total, Mapped=sum(mapped), 
+        Filtered=sum(filtered, na.rm=TRUE), Marked=sum(marked), 
+        Remaining=sum(survivor, na.rm=TRUE))
+}
+diag.stats <- data.frame(do.call(rbind, diagnostics))
+diag.stats$Prop.mapped <- diag.stats$Mapped/diag.stats$Total*100
+diag.stats$Prop.marked <- diag.stats$Marked/diag.stats$Mapped*100
+diag.stats$Prop.left <- diag.stats$Filtered/diag.stats$Total*100
+diag.stats
+```
+
+# Getting paired read statistics
+
+Getting the insert sizes for each BAM file:
+
+```{r}
+library(csaw)
+param <- readParam(dedup=TRUE, minq=10, pe="both")
+
+pe.diagnostics <- list()
+par(mfrow=c(1,2))    
+for (idx in seq_along(bam.files)) {
+    out <- getPESizes(bam.files[idx], param=param)
+    toshow <- out$sizes
+    toshow <- toshow[toshow <= 1e3]
+    hist(toshow, breaks=100, xlab="Insert size (bp)",
+        main=prefixes[idx])
+    pe.diagnostics[[prefixes[idx]]] <- out$diagnostics
+}
+```
+
+Reporting the overall PE diagnostics:
+
+```{r}
+do.call(rbind, pe.diagnostics)
+```
+
+# Getting cross-correlations
+
+Computing cross-correlations between forward and reverse strands.
+This requires that we only use one read from each pair, otherwise it would be trivial due to the read pair insert size.
+
+```{r}
+library(csaw)
+param <- readParam(dedup=TRUE, minq=10, pe="first")
+par(mfrow=c(1,2))    
+for (idx in seq_along(bam.files)) {
+    out <- correlateReads(bam.files[idx], param=param)
+    plot(seq_along(out)-1, out, xlab="Delay (bp)", ylab="CCF",
+        main=prefixes[idx])            
+}
+```
+
+# Session information
+
+```{r}
+sessionInfo()
+```
