@@ -114,7 +114,7 @@ adjc <- cpm(tmp, log=TRUE, prior.count=0.5)
 average <- aveLogCPM(tmp)
 norm.factors <- filtered$norm.factors
 
-par(mfrow=c(4, 2))
+par(mfrow=c(1, 2))
 for (x in 2:ncol(adjc)) {
     smoothScatter(average, adjc[,x]-adjc[,1], xlab="Average", 
         ylab=sprintf("M (%i vs 1)", x))
