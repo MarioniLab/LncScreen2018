@@ -83,7 +83,6 @@ Computing cross-correlations between forward and reverse strands.
 This requires that we only use one read from each pair, otherwise it would be trivial due to the read pair insert size.
 
 ```{r}
-library(csaw)
 param <- readParam(dedup=TRUE, minq=10, pe="first")
 par(mfrow=c(1,2))    
 for (idx in seq_along(bam.files)) {
@@ -91,6 +90,20 @@ for (idx in seq_along(bam.files)) {
     plot(seq_along(out)-1, out, xlab="Delay (bp)", ylab="CCF",
         main=prefixes[idx])            
 }
+```
+
+# Quantifying the yeast spike-ins
+
+We figure out the number of read pairs mapping to the yeast genome, which should have been spiked in at a constant ratio to the amount of chromatin.
+
+```{r}
+param <- readParam(dedup=TRUE, minq=10, pe="both")
+bins <- windowCounts(bam.files, bin=TRUE, width=1e6, param=param) 
+is.yeast <- !grepl("^chr", as.character(seqnames(bins)))
+out <- data.frame(Yeast=colSums(assay(bins)[is.yeast,,drop=FALSE]), 
+    Total=colSums(assay(bins)), row.names=basename(bam.files))
+out$Prop <- out$Yeast/out$Total
+out
 ```
 
 # Session information
