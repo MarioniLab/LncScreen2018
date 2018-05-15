@@ -1,0 +1,310 @@
+---
+title: Consolidating DB analyses for H3K4me3 cut-and-run 
+author: Aaron Lun
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    fig_caption: yes
+---
+
+# Reading in the results
+
+Here we consolidate the various window-based analyses into a single set of results.
+First, we define the files to load in:
+
+```{r}
+library(csaw)
+all.files <- list.files(full=TRUE, pattern="^h3k4me3_.*rds$")
+all.files
+```
+
+And we load in the results:
+
+```{r}
+all.results <- lapply(all.files, readRDS)
+all.regions <- lapply(all.results, "[[", i="windows")
+all.rnai <- lapply(all.results, "[[", i="RNAi")
+all.lna <- lapply(all.results, "[[", i="LNA")
+```
+
+We apply an IUT on the one-sided p-values.
+This involves converting each p-value into two one-sided values, performing IUTs on each side, and then effectively performing a Bonferoni correction to combine them again.
+
+```{r}
+all.combined <- vector("list", length(all.results))
+for (idx in seq_along(all.rnai)) {
+    cur.rnai <- all.rnai[[idx]]
+    cur.lna <- all.lna[[idx]]
+
+    up.rnai <- cur.rnai$logFC > 0
+    left.rnai <- ifelse(up.rnai, cur.rnai$PValue/2, 1-cur.rnai$PValue/2)
+    right.rnai <- ifelse(!up.rnai, cur.rnai$PValue/2, 1-cur.rnai$PValue/2)
+
+    up.lna <- cur.lna$logFC > 0
+    left.lna <- ifelse(up.lna, cur.lna$PValue/2, 1-cur.lna$PValue/2)
+    right.lna <- ifelse(!up.lna, cur.lna$PValue/2, 1-cur.lna$PValue/2)
+
+    left.p <- pmax(left.rnai, left.lna)
+    right.p <- pmax(right.rnai, right.lna)
+    all.combined[[idx]] <- data.frame(logFC=(cur.rnai$logFC + cur.lna$logFC)/2,
+        PValue=pmin(left.p, right.p, 0.5)*2)
+}
+```
+
+# Reporting DB regions
+
+## RNAi
+
+We consolidate all of these results into a single set of DB regions, with a maximum region width of 10 kbp.
+First we do so for RNAi:
+
+```{r}
+out <- consolidateSizes(all.regions, all.rnai, 
+    merge.args=list(max.width=10e3, tol=100))
+out$region
+```
+
+We examine the number of regions that change, and in which direction.
+
+```{r}
+table(out$table$FDR <= 0.05, out$table$direction)
+```
+
+We also get the best log-fold changes in each region.
+
+```{r}
+best <- getBestTest(unlist(out$id), do.call(rbind, all.rnai))
+head(best)
+```
+
+Adding annotation.
+
+```{r}
+library(org.Hs.eg.db)
+library(EnsDb.Hsapiens.v86)
+fiddling <- out$region
+seqlevels(fiddling) <- sub("^chr", "", seqlevels(fiddling))
+suppressWarnings({
+    surrounds <- detailRanges(orgdb=org.Hs.eg.db, txdb=EnsDb.Hsapiens.v86, 
+        fiddling, key.field="ENSEMBL")
+})
+```
+
+We save this result to file.
+
+```{r}
+output <- data.frame(as.data.frame(out$region)[,1:3],
+    out$table, Best.logFC=best$logFC, surrounds)
+output <- output[order(output$PValue),]    
+write.table(file="RNAi_h3k4me3_regions.tsv", output,
+    row.names=FALSE, sep="\t", quote=FALSE)        
+head(output)
+```
+
+Also the significant hits to a BED file for viewing.
+
+```{r}
+db.regions <- out$region
+db.regions$score <- -10*log10(out$table$PValue)
+library(rtracklayer)
+export(con='RNAi_h3k4me3.bed', db.regions[out$table$FDR<=0.05])
+```
+
+## LNA
+
+We repeat this process for LNA:
+
+```{r}
+out <- consolidateSizes(all.regions, all.lna, 
+    merge.args=list(max.width=10e3, tol=100))
+```
+
+We examine the number of regions that change, and in which direction.
+
+```{r}
+table(out$table$FDR <= 0.05, out$table$direction)
+```
+
+We also get the best log-fold changes in each region.
+
+```{r}
+best <- getBestTest(unlist(out$id), do.call(rbind, all.lna))
+head(best)
+```
+
+We save this result to file (no need to recompute annotation, as the regions are the same).
+
+```{r}
+output <- data.frame(as.data.frame(out$region)[,1:3],
+    out$table, Best.logFC=best$logFC, surrounds)
+output <- output[order(output$PValue),]    
+write.table(file="LNA_h3k4me3_regions.tsv", output,
+    row.names=FALSE, sep="\t", quote=FALSE)        
+```
+
+Also the significant hits to a BED file for viewing.
+
+```{r}
+db.regions <- out$region
+db.regions$score <- -10*log10(out$table$PValue)
+library(rtracklayer)
+export(con='LNA_h3k4me3.bed', db.regions[out$table$FDR<=0.05])
+```
+
+## In both
+
+We repeat this process for the LNA/RNAi combined results:
+
+```{r}
+out <- consolidateSizes(all.regions, all.combined, 
+    merge.args=list(max.width=10e3, tol=100))
+```
+
+We examine the number of regions that change, and in which direction.
+
+```{r}
+table(out$table$FDR <= 0.05, out$table$direction)
+```
+
+We save this result to file.
+
+```{r}
+best <- getBestTest(unlist(out$id), do.call(rbind, all.combined))
+output <- data.frame(as.data.frame(out$region)[,1:3],
+    out$table, Best.logFC=best$logFC, surrounds)
+output <- output[order(output$PValue),]    
+write.table(file="Both_h3k4me3_regions.tsv", output,
+    row.names=FALSE, sep="\t", quote=FALSE)        
+```
+
+Also the significant hits to a BED file for viewing.
+
+```{r}
+db.regions <- out$region
+db.regions$score <- -10*log10(out$table$PValue)
+library(rtracklayer)
+export(con='Both_h3k4me3.bed', db.regions[out$table$FDR<=0.05])
+```
+
+# Reporting DB genes
+
+## Defining the regions
+
+We obtain genic regions from the Ensembl annotation:
+
+```{r}
+hs.genes <- genes(EnsDb.Hsapiens.v86)
+length(hs.genes)
+```
+
+Fixing the sequence levels:
+
+```{r}
+seqlevels(hs.genes) <- paste0("chr", seqlevels(hs.genes))
+seqlevels(hs.genes)
+```
+
+Getting the gene symbols.
+
+```{r}
+anno <- data.frame(Ensembl=hs.genes$gene_id, Symbol=hs.genes$gene_name)
+head(anno)   
+```
+
+We also create a function to consolidate the best scores across sizes.
+
+```{r}
+allBest <- function(ids, results, FUN=getBestOverlaps) {
+    out <- mapply(FUN=FUN, ids, results, SIMPLIFY=FALSE)
+    pvals <- lapply(out, "[[", "PValue")
+    lfcs <- lapply(out, "[[", "logFC")
+    all.p <- do.call(cbind, pvals)
+    all.p[is.na(all.p)] <- 1
+    i <- max.col(-all.p)
+    unname(do.call(cbind, lfcs)[cbind(seq_along(i), i)])
+}
+```
+
+## RNAi
+
+Consolidating results across window sizes:
+
+```{r}
+suppressWarnings({
+    out <- consolidateSizes(all.regions, all.rnai, region=hs.genes)
+})
+```
+
+We examine the number of regions that change, and in which direction.
+
+```{r}
+table(out$table$FDR <= 0.05, out$table$direction)
+```
+
+We save this result to file.
+
+```{r}
+output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.rnai))
+output <- output[order(output$PValue),]    
+output <- output[!is.na(output$PValue),]
+write.table(file="RNAi_h3k4me3_genes.tsv", output,
+    row.names=FALSE, sep="\t", quote=FALSE)
+```
+
+## LNA
+
+Consolidating results across window sizes:
+
+```{r}
+suppressWarnings({
+    out <- consolidateSizes(all.regions, all.lna, region=hs.genes)
+})
+```
+
+We examine the number of regions that change, and in which direction.
+
+```{r}
+table(out$table$FDR <= 0.05, out$table$direction)
+```
+
+We save this result to file.
+
+```{r}
+output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.lna))
+output <- output[order(output$PValue),]    
+output <- output[!is.na(output$PValue),]
+write.table(file="LNA_h3k4me3_genes.tsv", output,
+    row.names=FALSE, sep="\t", quote=FALSE)        
+```
+
+## Both
+
+Consolidating results across window sizes:
+
+```{r}
+suppressWarnings({
+    out <- consolidateSizes(all.regions, all.combined, region=hs.genes)
+})
+```
+
+We examine the number of regions that change, and in which direction.
+
+```{r}
+table(out$table$FDR <= 0.05, out$table$direction)
+```
+
+We save this result to file.
+
+```{r}
+output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.combined))
+output <- output[order(output$PValue),]    
+output <- output[!is.na(output$PValue),]
+write.table(file="Both_h3k4me3_genes.tsv", output,
+    row.names=FALSE, sep="\t", quote=FALSE)        
+```
+
+# Session information
+
+```{r}
+sessionInfo()
+```
