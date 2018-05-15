@@ -1,5 +1,5 @@
 ---
-title: Consolidating DB analyses for H3K4me3 cut-and-run 
+title: Consolidating DB analyses for #_MARK_# cut-and-run 
 author: Aaron Lun
 date: "`r Sys.Date()`"
 output:
@@ -14,7 +14,7 @@ First, we define the files to load in:
 
 ```{r}
 library(csaw)
-all.files <- list.files(full=TRUE, pattern="^h3k4me3_.*rds$")
+all.files <- list.files(full=TRUE, pattern="^#_MARK_#_.*rds$")
 all.files
 ```
 
@@ -96,7 +96,7 @@ We save this result to file.
 output <- data.frame(as.data.frame(out$region)[,1:3],
     out$table, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
-write.table(file="RNAi_h3k4me3_regions.tsv", output,
+write.table(file="RNAi_#_MARK_#_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
 head(output)
 ```
@@ -107,7 +107,7 @@ Also the significant hits to a BED file for viewing.
 db.regions <- out$region
 db.regions$score <- -10*log10(out$table$PValue)
 library(rtracklayer)
-export(con='RNAi_h3k4me3.bed', db.regions[out$table$FDR<=0.05])
+export(con='RNAi_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
 ```
 
 ## LNA
@@ -138,7 +138,7 @@ We save this result to file (no need to recompute annotation, as the regions are
 output <- data.frame(as.data.frame(out$region)[,1:3],
     out$table, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
-write.table(file="LNA_h3k4me3_regions.tsv", output,
+write.table(file="LNA_#_MARK_#_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
 ```
 
@@ -148,7 +148,7 @@ Also the significant hits to a BED file for viewing.
 db.regions <- out$region
 db.regions$score <- -10*log10(out$table$PValue)
 library(rtracklayer)
-export(con='LNA_h3k4me3.bed', db.regions[out$table$FDR<=0.05])
+export(con='LNA_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
 ```
 
 ## In both
@@ -173,7 +173,7 @@ best <- getBestTest(unlist(out$id), do.call(rbind, all.combined))
 output <- data.frame(as.data.frame(out$region)[,1:3],
     out$table, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
-write.table(file="Both_h3k4me3_regions.tsv", output,
+write.table(file="Both_#_MARK_#_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
 ```
 
@@ -183,7 +183,7 @@ Also the significant hits to a BED file for viewing.
 db.regions <- out$region
 db.regions$score <- -10*log10(out$table$PValue)
 library(rtracklayer)
-export(con='Both_h3k4me3.bed', db.regions[out$table$FDR<=0.05])
+export(con='Both_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
 ```
 
 # Reporting DB genes
@@ -247,7 +247,7 @@ We save this result to file.
 output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.rnai))
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
-write.table(file="RNAi_h3k4me3_genes.tsv", output,
+write.table(file="RNAi_#_MARK_#_genes.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)
 ```
 
@@ -273,7 +273,7 @@ We save this result to file.
 output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.lna))
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
-write.table(file="LNA_h3k4me3_genes.tsv", output,
+write.table(file="LNA_#_MARK_#_genes.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
 ```
 
@@ -299,7 +299,7 @@ We save this result to file.
 output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.combined))
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
-write.table(file="Both_h3k4me3_genes.tsv", output,
+write.table(file="Both_#_MARK_#_genes.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: DB analysis of H3K4me3 cut-and-run with #_WIDTH_# bp windows
+title: DB analysis of #_MARK_# cut-and-run with #_WIDTH_# bp windows
 author: Aaron Lun
 date: "`r Sys.Date()`"
 output:
@@ -219,7 +219,7 @@ summary(decideTests(res.lna))
 Saving the window coordinates as well as the various results.
 
 ```{r}
-saveRDS(file="h3k4me3_#_WIDTH_#.rds", list(windows=rowRanges(filtered), 
+saveRDS(file="#_MARK_#_#_WIDTH_#.rds", list(windows=rowRanges(filtered), 
     RNAi=res.si$table, LNA=res.lna$table)) 
 ```
 
