@@ -7,6 +7,11 @@ output:
     fig_caption: yes
 ---
 
+```{r, echo=FALSE, message=FALSE, results="hide"}
+library(BiocStyle)
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+```
+
 # Reading in the results
 
 Here we consolidate the various window-based analyses into a single set of results.
@@ -83,7 +88,8 @@ Adding annotation.
 library(org.Hs.eg.db)
 library(EnsDb.Hsapiens.v86)
 fiddling <- out$region
-seqlevels(fiddling) <- sub("^chr", "", seqlevels(fiddling))
+seqlevels(fiddling) <- paste0("tmp_", seqlevels(fiddling)) # avoid clash with yeast X.
+seqlevels(fiddling) <- sub("^tmp_chr", "", seqlevels(fiddling))
 suppressWarnings({
     surrounds <- detailRanges(orgdb=org.Hs.eg.db, txdb=EnsDb.Hsapiens.v86, 
         fiddling, key.field="ENSEMBL")
@@ -201,7 +207,7 @@ Fixing the sequence levels:
 
 ```{r}
 seqlevels(hs.genes) <- paste0("chr", seqlevels(hs.genes))
-seqlevels(hs.genes)
+head(seqlevels(hs.genes))
 ```
 
 Getting the gene symbols.
