@@ -18,14 +18,7 @@ First we define the relevant files.
 
 ```{r}
 bam.files <- c(
-    "SLX-15763.iPCRtagT001.CC6ULANXX.s_7.r.bam",
-    "SLX-15763.iPCRtagT006.CC6ULANXX.s_7.r.bam",
-    "SLX-15763.iPCRtagT011.CC6ULANXX.s_7.r.bam",
-    "SLX-15763.iPCRtagT034.CC6ULANXX.s_7.r.bam",
-    "SLX-15764.D708_D501.CC6ULANXX.s_8.r.bam",
-    "SLX-15764.D709_D502.CC6ULANXX.s_8.r.bam",
-    "SLX-15764.D710_D503.CC6ULANXX.s_8.r.bam",
-    "SLX-15764.D711_D504.CC6ULANXX.s_8.r.bam"
+    #_FILES_#
 )
 ```
 
