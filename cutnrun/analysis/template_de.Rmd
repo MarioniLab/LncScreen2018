@@ -115,6 +115,13 @@ for (x in 2:ncol(adjc)) {
 }
 ```
 
+We save the normalization factors and library sizes for later use.
+
+```{r}
+write.table(file="norm_#_WIDTH_#.tsv", quote=FALSE, row.names=FALSE, sep="\t",
+    colData(filtered)[,c("bam.files", "totals", "norm.factors")])
+```
+
 ## Computing trended offsets
 
 We take it to the next level and normalize out trended biases.
