@@ -1,0 +1,191 @@
+---
+title: "CHART-seq analysis for 271 pulldown with #_WIDTH_# windows" 
+author: Aaron Lun
+date: "`Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    fig_caption: false
+---
+
+```{r, echo=FALSE, results="hide"}
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+```
+
+# Assigning reads into windows
+
+This analysis tests for 271 binding to the genome by comparing the pulldown to a sense control.
+First, we specify the files that we'll be working with.
+
+```{r}
+metadata <- read.csv("metadata.csv", header=TRUE)
+keep <- grepl("^271", metadata$Sample) 
+metadata <- metadata[keep,]
+metadata$File <- paste0(metadata$Batch, ".", metadata$Tag, ".HL73MBBXX.bam")
+metadata
+```
+
+We set up file paths and such.
+In particular, we only use reads with mapping quality scores greater than or equal to 10.
+We also remove duplicate reads that form problematic stacks.
+
+```{r}
+library(csaw)
+param <- readParam(minq=10, pe="both", dedup=TRUE, max.frag=1000)
+bamdir <- "../bam"
+fnames <- file.path(bamdir, metadata$File)
+```
+
+We assign the reads in these files into #_WIDTH_# bp windows.
+We also increase the spacing to reduce memory usage.
+
+```{r}
+win.data <- windowCounts(fnames, width=#_WIDTH_#, param=param,
+    spacing=max(50, #_WIDTH_#/4))
+win.data    
+```
+
+We also count the reads into 5 kbp bins for use during normalization and filtering.
+This assumes that most regions of the genome are not bound and contain only background noise during enrichment.
+
+```{r}
+bin.data <- windowCounts(fnames, width=5000, param=param, bin=TRUE)
+bin.data
+```
+
+# Filtering out low-abundance windows
+
+We use the median abundance of the bins to define the expected level of background coverage throughout the genome.
+This is, in turn, used to define the log-fold enrichment over the background for each window.
+
+```{r}
+filt.stat <- filterWindows(win.data, bin.data)
+hist(filt.stat$filter, xlab="Log-fold enrichment over background")
+```
+
+We filter out windows that are less than 5-fold enriched over the background.
+This enriches for windows that are more likely to be genuine binding sites of the lncRNA.
+
+```{r}
+threshold <- log2(5)
+threshold
+keep <- filt.stat$filter >= threshold
+win.data <- win.data[keep,]
+summary(keep)
+```
+
+```{r, echo=FALSE, results="hide"}
+gc()
+```
+
+# Normalization of composition biases
+
+When comparing to negative controls, it is necessary to normalize out composition biases.
+These are introduced by unbalanced enrichment between libraries, resulting in spurious differences in coverage in unbound regions.
+We use the bin data to correct for this, again assuming that most regions are unbound.
+
+```{r}
+win.data <- normFactors(bin.data, se.out=win.data)
+normfacs <- win.data$norm.factors
+data.frame(File=fnames, Total=win.data$totals, Norm.Factor=normfacs)
+```
+
+We examine some MA plots to make sure that normalization has been performed satisfactorily.
+This is a paired-sample design, so it's only necessary to compare between matched control/pulldown samples.
+The red line represents the normalization factor, which is shifted to zero upon normalization.
+
+```{r, fig.width=10, fig.height=6}
+library(edgeR)
+adjc <- calculateCPM(bin.data, prior.count=2, log=TRUE)
+average <- scaledAverage(bin.data)
+by.exp <- split(seq_len(nrow(metadata)), sub(".*_exp", "", metadata$Sample))
+stopifnot(all(lengths(by.exp)==2L))
+
+par(mfrow=c(1,2))
+for (b in names(by.exp)) {
+    curb <- by.exp[[b]]
+    M <- adjc[,curb[1]] - adjc[,curb[2]]
+    smoothScatter(average, M, xlab="Log-average count", ylab="M (pulldown vs sense)", 
+        main=paste("Batch", b))
+    abline(h=log2(normfacs[curb[1]]/normfacs[curb[2]]), col="red", lty=2)
+}
+```
+
+```{r, echo=FALSE, results="hide"}
+rm(adjc)
+gc()
+```
+
+# Modelling biological variability
+
+We set up an additive design to account for the batch effect.
+Some relevelling is required so that the last coefficient represents enrichment over the negative control.
+
+```{r}
+Group <- factor(sub("_.*", "", metadata$Sample), c("271s", "271"))
+Batch <- sub(".*_", "", metadata$Sample)
+design <- model.matrix(~0 + Batch + Group)
+design
+```
+
+We check the remaining windows with a MDS plot to see how the libraries behave.
+We vary the number of `top` windows used to calculate the leading log-fold change between libraries, to check that we get similar results.
+
+```{r}
+labels <- paste0(sub("271", "", gsub("_(.)[^_]+", "\\1", Group)), ".", Batch)
+wadjc <- calculateCPM(win.data, log=TRUE, prior.count=2)
+par(mfrow=c(2,2))
+for (top in c(500, 2000, 5000, 20000)) {
+    plotMDS(wadjc, labels=labels, top=top, main=top)
+}
+```
+
+
+We use the quasi-likelihood (QL) methods in _edgeR_ to model the biological variability between replicates.
+First we estimate the trended negative binomial dispersion, which models the empirical mean-variance relationship.
+
+```{r}
+y <- asDGEList(win.data)
+y <- estimateDisp(y, design)
+summary(y$trended.dispersion)
+plotBCV(y)
+```
+
+Then we estimate the QL dispersion, which models window-specific variability around the trended dispersion.
+This is done using empirical Bayes shrinkage where window-specific dispersions are squeezed towards the trend.
+This improves the precision of the estimates when replication is limited.
+
+```{r}
+fit <- glmQLFit(y, design, robust=TRUE)
+summary(fit$df.prior)
+plotQLDisp(fit)
+```
+
+```{r, echo=FALSE, results="hide"}
+gc()
+```
+
+# Testing for significant differences
+
+We test for differential binding between the pulldown samples and their matched controls.
+This is done using the QL F-test, where we can get the number of windows with significant differences in each direction.
+
+```{r}
+res <- glmQLFTest(fit, coef=ncol(design))
+summary(decideTestsDGE(res))
+```
+
+# Saving the results
+
+Saving the window coordinates as well as the various results.
+
+```{r}
+saveRDS(file="out_#_WIDTH_#.rds", list(windows=rowRanges(filtered), 
+    results=res))
+```
+
+Reporting the session information.
+
+```{r}
+sessionInfo()
+```
+
