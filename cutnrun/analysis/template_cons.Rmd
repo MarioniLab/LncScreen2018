@@ -58,27 +58,36 @@ for (idx in seq_along(all.rnai)) {
 
 # Reporting DB regions
 
-## RNAi
+## Consolidating regions
 
 We consolidate all of these results into a single set of DB regions, with a maximum region width of 10 kbp.
-First we do so for RNAi:
 
 ```{r}
-out <- consolidateSizes(all.regions, all.rnai, 
+merged <- consolidateWindows(all.regions, 
     merge.args=list(max.width=10e3, tol=100))
-out$region
+merged$region
+```
+
+## RNAi
+
+We compute the consolidated statistics for the RNAi comparison.
+
+```{r}
+tabcom <- consolidateTests(merged$id, all.rnai, merged$weight)
+head(tabcom)
 ```
 
 We examine the number of regions that change, and in which direction.
 
 ```{r}
-table(out$table$FDR <= 0.05, out$table$direction)
+table(tabcom$FDR <= 0.05, tabcom$direction)
 ```
 
 We also get the best log-fold changes in each region.
 
 ```{r}
-best <- getBestTest(unlist(out$id), do.call(rbind, all.rnai))
+best <- consolidateTests(merged$id, all.rnai, merged$weight,
+    FUN=getBestTest)
 head(best)
 ```
 
@@ -87,7 +96,7 @@ Adding annotation.
 ```{r}
 library(org.Hs.eg.db)
 library(EnsDb.Hsapiens.v86)
-fiddling <- out$region
+fiddling <- merged$region
 seqlevels(fiddling) <- paste0("tmp_", seqlevels(fiddling)) # avoid clash with yeast X.
 seqlevels(fiddling) <- sub("^tmp_chr", "", seqlevels(fiddling))
 suppressWarnings({
@@ -99,8 +108,8 @@ suppressWarnings({
 We save this result to file.
 
 ```{r}
-output <- data.frame(as.data.frame(out$region)[,1:3],
-    out$table, Best.logFC=best$logFC, surrounds)
+output <- data.frame(as.data.frame(merged$region)[,1:3],
+    tabcom, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
 write.table(file="RNAi_#_MARK_#_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
@@ -110,10 +119,10 @@ head(output)
 Also the significant hits to a BED file for viewing.
 
 ```{r}
-db.regions <- out$region
-db.regions$score <- -10*log10(out$table$PValue)
+db.regions <- merged$region
+db.regions$score <- -10*log10(tabcom$PValue)
 library(rtracklayer)
-export(con='RNAi_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
+export(con='RNAi_#_MARK_#.bed', db.regions[tabcom$FDR<=0.05])
 ```
 
 ## LNA
@@ -121,28 +130,29 @@ export(con='RNAi_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
 We repeat this process for LNA:
 
 ```{r}
-out <- consolidateSizes(all.regions, all.lna, 
-    merge.args=list(max.width=10e3, tol=100))
+tabcom <- consolidateTests(merged$id, all.lna, merged$weight)
+head(tabcom)
 ```
 
 We examine the number of regions that change, and in which direction.
 
 ```{r}
-table(out$table$FDR <= 0.05, out$table$direction)
+table(tabcom$FDR <= 0.05, tabcom$direction)
 ```
 
 We also get the best log-fold changes in each region.
 
 ```{r}
-best <- getBestTest(unlist(out$id), do.call(rbind, all.lna))
+best <- consolidateTests(merged$id, all.lna, merged$weight,
+    FUN=getBestTest)
 head(best)
 ```
 
 We save this result to file (no need to recompute annotation, as the regions are the same).
 
 ```{r}
-output <- data.frame(as.data.frame(out$region)[,1:3],
-    out$table, Best.logFC=best$logFC, surrounds)
+output <- data.frame(as.data.frame(merged$region)[,1:3],
+    tabcom, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
 write.table(file="LNA_#_MARK_#_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
@@ -151,10 +161,10 @@ write.table(file="LNA_#_MARK_#_regions.tsv", output,
 Also the significant hits to a BED file for viewing.
 
 ```{r}
-db.regions <- out$region
-db.regions$score <- -10*log10(out$table$PValue)
+db.regions <- merged$region
+db.regions$score <- -10*log10(tabcom$PValue)
 library(rtracklayer)
-export(con='LNA_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
+export(con='LNA_#_MARK_#.bed', db.regions[tabcom$FDR<=0.05])
 ```
 
 ## In both
@@ -162,22 +172,29 @@ export(con='LNA_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
 We repeat this process for the LNA/RNAi combined results:
 
 ```{r}
-out <- consolidateSizes(all.regions, all.combined, 
-    merge.args=list(max.width=10e3, tol=100))
+tabcom <- consolidateTests(merged$id, all.combined, merged$weight)
+head(tabcom)
 ```
 
 We examine the number of regions that change, and in which direction.
 
 ```{r}
-table(out$table$FDR <= 0.05, out$table$direction)
+table(tabcom$FDR <= 0.05, tabcom$direction)
+```
+
+We also get the best log-fold changes in each region.
+
+```{r}
+best <- consolidateTests(merged$id, all.lna, merged$weight,
+    FUN=getBestTest)
+head(best)
 ```
 
 We save this result to file.
 
 ```{r}
-best <- getBestTest(unlist(out$id), do.call(rbind, all.combined))
-output <- data.frame(as.data.frame(out$region)[,1:3],
-    out$table, Best.logFC=best$logFC, surrounds)
+output <- data.frame(as.data.frame(merged$region)[,1:3],
+    tabcom, Best.logFC=best$logFC, surrounds)
 output <- output[order(output$PValue),]    
 write.table(file="Both_#_MARK_#_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
@@ -186,10 +203,10 @@ write.table(file="Both_#_MARK_#_regions.tsv", output,
 Also the significant hits to a BED file for viewing.
 
 ```{r}
-db.regions <- out$region
-db.regions$score <- -10*log10(out$table$PValue)
+db.regions <- merged$region
+db.regions$score <- -10*log10(tabcom$PValue)
 library(rtracklayer)
-export(con='Both_#_MARK_#.bed', db.regions[out$table$FDR<=0.05])
+export(con='Both_#_MARK_#.bed', db.regions[tabcom$FDR<=0.05])
 ```
 
 # Reporting DB genes
@@ -200,7 +217,16 @@ We obtain genic regions from the Ensembl annotation:
 
 ```{r}
 hs.genes <- genes(EnsDb.Hsapiens.v86)
-length(hs.genes)
+hs.genes[,2]
+```
+
+We also kick out each gene by 3 kbp at the 5' end, to capture binding at the putative promoeter region.
+
+```{r}
+suppressWarnings({
+    hs.genes <- resize(hs.genes, width(hs.genes)+3e3, fix="end")
+})
+hs.genes[,2]
 ```
 
 Fixing the sequence levels:
@@ -217,40 +243,41 @@ anno <- data.frame(Ensembl=hs.genes$gene_id, Symbol=hs.genes$gene_name)
 head(anno)   
 ```
 
-We also create a function to consolidate the best scores across sizes.
+Finding the windows that overlap each gene:
 
 ```{r}
-allBest <- function(ids, results, FUN=getBestOverlaps) {
-    out <- mapply(FUN=FUN, ids, results, SIMPLIFY=FALSE)
-    pvals <- lapply(out, "[[", "PValue")
-    lfcs <- lapply(out, "[[", "logFC")
-    all.p <- do.call(cbind, pvals)
-    all.p[is.na(all.p)] <- 1
-    i <- max.col(-all.p)
-    unname(do.call(cbind, lfcs)[cbind(seq_along(i), i)])
-}
+suppressWarnings({
+    molaps <- consolidateWindows(all.regions, region=hs.genes)
+})
 ```
 
 ## RNAi
 
-Consolidating results across window sizes:
+We compute combined statistics for each gene:
 
 ```{r}
-suppressWarnings({
-    out <- consolidateSizes(all.regions, all.rnai, region=hs.genes)
-})
+tabcom <- consolidateOverlaps(molaps$olap, all.rnai, molaps$weight)
+head(tabcom)    
 ```
 
 We examine the number of regions that change, and in which direction.
 
 ```{r}
-table(out$table$FDR <= 0.05, out$table$direction)
+table(tabcom$FDR <= 0.05, tabcom$direction)
+```
+
+We also compute the best statistics for each gene.
+
+```{r}
+tabbest <- consolidateOverlaps(molaps$olap, all.rnai,
+    molaps$weight, FUN=getBestOverlaps)
+head(tabbest)
 ```
 
 We save this result to file.
 
 ```{r}
-output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.rnai))
+output <- data.frame(anno, tabcom, best.logFC=tabbest$logFC)
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
 write.table(file="RNAi_#_MARK_#_genes.tsv", output,
@@ -262,21 +289,28 @@ write.table(file="RNAi_#_MARK_#_genes.tsv", output,
 Consolidating results across window sizes:
 
 ```{r}
-suppressWarnings({
-    out <- consolidateSizes(all.regions, all.lna, region=hs.genes)
-})
+tabcom <- consolidateOverlaps(molaps$olap, all.lna, molaps$weight)
+head(tabcom)    
 ```
 
-We examine the number of regions that change, and in which direction.
+We examine the number of genes that change, and in which direction.
 
 ```{r}
-table(out$table$FDR <= 0.05, out$table$direction)
+table(tabcom$FDR <= 0.05, tabcom$direction)
+```
+
+We also compute the best statistics for each gene.
+
+```{r}
+tabbest <- consolidateOverlaps(molaps$olap, all.lna,
+    molaps$weight, FUN=getBestOverlaps)
+head(tabbest)
 ```
 
 We save this result to file.
 
 ```{r}
-output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.lna))
+output <- data.frame(anno, tabcom, best.logFC=tabbest$logFC)
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
 write.table(file="LNA_#_MARK_#_genes.tsv", output,
@@ -288,21 +322,28 @@ write.table(file="LNA_#_MARK_#_genes.tsv", output,
 Consolidating results across window sizes:
 
 ```{r}
-suppressWarnings({
-    out <- consolidateSizes(all.regions, all.combined, region=hs.genes)
-})
+tabcom <- consolidateOverlaps(molaps$olap, all.combined, molaps$weight)
+head(tabcom)    
 ```
 
-We examine the number of regions that change, and in which direction.
+We examine the number of genes that change, and in which direction.
 
 ```{r}
-table(out$table$FDR <= 0.05, out$table$direction)
+table(tabcom$FDR <= 0.05, tabcom$direction)
+```
+
+We also compute the best statistics for each gene.
+
+```{r}
+tabbest <- consolidateOverlaps(molaps$olap, all.combined,
+    molaps$weight, FUN=getBestOverlaps)
+head(tabbest)
 ```
 
 We save this result to file.
 
 ```{r}
-output <- data.frame(anno, out$table, best.logFC=allBest(out$id, all.combined))
+output <- data.frame(anno, tabcom, best.logFC=tabbest$logFC)
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
 write.table(file="Both_#_MARK_#_genes.tsv", output,
