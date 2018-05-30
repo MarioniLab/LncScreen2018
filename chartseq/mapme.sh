@@ -1,5 +1,5 @@
 ispet=1
 extra="-g"
-fastq=($(ls merged/*.fq.gz))
+fastq=($(ls fastq/*.fq.gz))
 genome=../genomes/builds/hg38
-source ${HOME}/Code/mapping/multi_align.sh
+source ../tools/multi_align.sh
