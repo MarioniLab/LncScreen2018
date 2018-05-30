@@ -5,6 +5,23 @@
 
 # Genome builds
 
+## Chart-seq
+
+This uses the hg38 build of the human genome with no modifications:
+
+```sh
+sbatch << EOT
+#!/bin/bash
+#SBATCH -o log.hg38.out
+#SBATCH -e log.hg38.err
+#SBATCH -n 1
+#SBATCH --mem 16000
+subread-buildindex -o hg38 /scratchb/bioinformatics/reference_data/reference_genomes/homo_sapiens/hg38/fasta/hsa.hg38.fa 
+EOT
+```
+
+## Cut-and-run
+
 This combines the hg38 build of the human genome with yeast spike-ins:
 
 ```sh
