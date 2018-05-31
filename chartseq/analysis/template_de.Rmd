@@ -29,8 +29,10 @@ In particular, we only use reads with mapping quality scores greater than or equ
 We remove duplicate reads that form problematic stacks, as well as reads in known blacklist regions of the human genome.
 
 ```{r}
-library(csaw)
+library(rtracklayer)
 black <- import("http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz")
+
+library(csaw)
 param <- readParam(minq=10, pe="both", discard=black, dedup=TRUE, max.frag=1000)
 bamdir <- "../bam"
 fnames <- file.path(bamdir, metadata$File)
@@ -70,7 +72,7 @@ This enriches for windows that are more likely to be genuine binding sites of th
 threshold <- log2(5)
 threshold
 keep <- filt.stat$filter >= threshold
-win.data <- win.data[keep,]
+filtered <- win.data[keep,]
 summary(keep)
 ```
 
@@ -85,9 +87,9 @@ These are introduced by unbalanced enrichment between libraries, resulting in sp
 We use the bin data to correct for this, again assuming that most regions are unbound.
 
 ```{r}
-win.data <- normFactors(bin.data, se.out=win.data)
-normfacs <- win.data$norm.factors
-data.frame(File=fnames, Total=win.data$totals, Norm.Factor=normfacs)
+filtered <- normFactors(bin.data, se.out=filtered)
+normfacs <- filtered$norm.factors
+data.frame(File=fnames, Total=filtered$totals, Norm.Factor=normfacs)
 ```
 
 We examine some MA plots to make sure that normalization has been performed satisfactorily.
@@ -133,7 +135,7 @@ We vary the number of `top` windows used to calculate the leading log-fold chang
 
 ```{r}
 labels <- paste0(sub("271", "", gsub("_(.)[^_]+", "\\1", Group)), ".", Batch)
-wadjc <- calculateCPM(win.data, log=TRUE, prior.count=2)
+wadjc <- calculateCPM(filtered, log=TRUE, prior.count=2)
 par(mfrow=c(2,2))
 for (top in c(500, 2000, 5000, 20000)) {
     plotMDS(wadjc, labels=labels, top=top, main=top)
@@ -145,7 +147,7 @@ We use the quasi-likelihood (QL) methods in _edgeR_ to model the biological vari
 First we estimate the trended negative binomial dispersion, which models the empirical mean-variance relationship.
 
 ```{r}
-y <- asDGEList(win.data)
+y <- asDGEList(filtered)
 y <- estimateDisp(y, design)
 summary(y$trended.dispersion)
 plotBCV(y)
