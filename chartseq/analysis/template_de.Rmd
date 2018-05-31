@@ -26,11 +26,12 @@ metadata
 
 We set up file paths and such.
 In particular, we only use reads with mapping quality scores greater than or equal to 10.
-We also remove duplicate reads that form problematic stacks.
+We remove duplicate reads that form problematic stacks, as well as reads in known blacklist regions of the human genome.
 
 ```{r}
 library(csaw)
-param <- readParam(minq=10, pe="both", dedup=TRUE, max.frag=1000)
+black <- import("http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz")
+param <- readParam(minq=10, pe="both", discard=black, dedup=TRUE, max.frag=1000)
 bamdir <- "../bam"
 fnames <- file.path(bamdir, metadata$File)
 ```
