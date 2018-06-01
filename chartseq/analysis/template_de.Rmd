@@ -1,7 +1,7 @@
 ---
 title: "CHART-seq analysis for 271 pulldown with #_WIDTH_# windows" 
 author: Aaron Lun
-date: "`Sys.Date()`"
+date: "`r Sys.Date()`"
 output:
   BiocStyle::html_document:
     fig_caption: false
@@ -134,14 +134,13 @@ We check the remaining windows with a MDS plot to see how the libraries behave.
 We vary the number of `top` windows used to calculate the leading log-fold change between libraries, to check that we get similar results.
 
 ```{r}
-labels <- paste0(sub("271", "", gsub("_(.)[^_]+", "\\1", Group)), ".", Batch)
+labels <- paste0(Group, ".", Batch)
 wadjc <- calculateCPM(filtered, log=TRUE, prior.count=2)
-par(mfrow=c(2,2))
-for (top in c(500, 2000, 5000, 20000)) {
+par(mfrow=c(1,3))
+for (x in c(1000, 10000, 100000)) {
     plotMDS(wadjc, labels=labels, top=top, main=top)
 }
 ```
-
 
 We use the quasi-likelihood (QL) methods in _edgeR_ to model the biological variability between replicates.
 First we estimate the trended negative binomial dispersion, which models the empirical mean-variance relationship.

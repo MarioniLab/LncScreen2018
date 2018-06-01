@@ -1,7 +1,7 @@
 ---
 title: Consolidating DB analyses for CHART-seq
 author: Aaron Lun
-date: "`Sys.Date()`"
+date: "`r Sys.Date()`"
 output:
   BiocStyle::html_document:
     fig_caption: false
