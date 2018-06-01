@@ -183,7 +183,7 @@ Saving the window coordinates as well as the various results.
 
 ```{r}
 saveRDS(file="out_#_WIDTH_#.rds", list(windows=rowRanges(filtered), 
-    results=res))
+    results=res$table))
 ```
 
 Reporting the session information.

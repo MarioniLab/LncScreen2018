@@ -1,5 +1,5 @@
 ---
-title: title: Consolidating DB analyses for CHART-seq
+title: Consolidating DB analyses for CHART-seq
 author: Aaron Lun
 date: "`Sys.Date()`"
 output:
@@ -39,7 +39,7 @@ Windows less than 200 bp apart are merged together, with regions allowed to be 5
 ```{r}
 merged <- consolidateWindows(all.regions, 
     merge.args=list(tol=200, max.width=5e3))
-summary(as.integer(table(merged$id)))
+summary(as.integer(table(unlist(merged$id))))
 merged$region
 ```
 
@@ -75,7 +75,7 @@ Adding annotation.
 ```{r}
 library(org.Hs.eg.db)
 library(EnsDb.Hsapiens.v86)
-fiddling <- out$region
+fiddling <- merged$region
 seqlevels(fiddling) <- paste0("tmp_", seqlevels(fiddling)) # avoid clash with yeast X.
 seqlevels(fiddling) <- sub("^tmp_chr", "", seqlevels(fiddling))
 suppressWarnings({
@@ -147,30 +147,30 @@ suppressWarnings({
 We get the empirical FDR for each gene.
 
 ```{r}
-tabemp <- consolidateOverlaps(merged$olap, all.dres, 
-    merged$weight, FUN=empiricalOverlaps)
+tabemp <- consolidateOverlaps(molaps$olap, all.dres, 
+    molaps$weight, FUN=empiricalOverlaps)
 head(tabemp)
 summary(tabemp$FDR <= 0.05)
 ```
 
-We examine the number of genes that change, and in which direction.
+We can then compute the number and direction of the significant genes.
 
 ```{r}
-table(tabemp$FDR <= 0.05, tabemp$direction)
+table(tabemp$direction[tabemp$FDR <= 0.05]) 
 ```
 
 We also compute the best statistics for each gene.
 
 ```{r}
-tabbest <- consolidateOverlaps(merged$olap, all.dres,
-	merged$weight, FUN=getBestOverlaps)
+tabbest <- consolidateOverlaps(molaps$olap, all.dres,
+	molaps$weight, FUN=getBestOverlaps)
 head(tabbest)
 ```
 
 We save this result to file.
 
 ```{r}
-output <- data.frame(anno, tabemp, best.logFC=best$logFC) 
+output <- data.frame(anno, tabemp, best.logFC=tabbest$logFC) 
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
 write.table(file="db_genes.tsv", output,
