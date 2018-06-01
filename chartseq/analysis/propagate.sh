@@ -1,3 +1,9 @@
+#!/bin/bash
+#SBATCH -o log.out
+#SBATCH -e log.err
+#SBATCH -n 1
+#SBATCH --mem 16000
+
 set -e
 set -u
 

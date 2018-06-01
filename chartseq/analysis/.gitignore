@@ -1,5 +1,5 @@
-de_*.html
-de_*.rds
+*.html
+out_*.rds
 de_*.Rmd
 *.tsv
 *.bed
