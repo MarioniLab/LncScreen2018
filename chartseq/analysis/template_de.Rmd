@@ -113,6 +113,13 @@ for (b in names(by.exp)) {
 }
 ```
 
+We save the normalization factors and library sizes for later use.
+
+```{r}
+write.table(file="norm_#_WIDTH_#.tsv", quote=FALSE, row.names=FALSE, sep="\t",
+    colData(filtered)[,c("bam.files", "totals", "norm.factors")])
+```
+
 ```{r, echo=FALSE, results="hide"}
 rm(adjc)
 gc()
@@ -136,9 +143,10 @@ We vary the number of `top` windows used to calculate the leading log-fold chang
 ```{r}
 labels <- paste0(Group, ".", Batch)
 wadjc <- calculateCPM(filtered, log=TRUE, prior.count=2)
+col <- c("blue", "red")[as.integer(Group)]
 par(mfrow=c(1,3))
-for (x in c(1000, 10000, 100000)) {
-    plotMDS(wadjc, labels=labels, top=top, main=top)
+for (top in c(1000, 10000, 100000)) {
+    plotMDS(wadjc, labels=labels, top=top, main=top, col=col)
 }
 ```
 
