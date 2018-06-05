@@ -17,7 +17,7 @@ for (b in c(20160208, 20160907)) {
     # Figuring out which fastqs to keep.
     keep <- logical(length(all.fastqs))
     for (index in current$Library) {
-        keep <- keep | grepl(tolower(index), all.fastqs)
+        keep <- keep | grepl(index, all.fastqs)
     }
     retain.fastqs <- all.fastqs[keep]
     file.copy(file.path(fqsrc, retain.fastqs), "fastq")
@@ -38,6 +38,7 @@ fqsrc <- file.path(curpath, "fastq")
 
 all.fastqs <- list.files(fqsrc, pattern="(fastq|fq).gz") 
 metasrc <- read.csv(file.path(curpath, "metadata.csv"), stringsAsFactors=FALSE)
+metasrc$DO.numbers <- tolower(metasrc$DO.numbers)
 md5 <- read.table(file.path(fqsrc, "md5.all"), stringsAsFactors=FALSE)
 
 # Figuring out which fastqs to keep.
@@ -50,11 +51,11 @@ for (index in current$Library) {
 
     keep <- grepl(tag, all.fastqs)
     keep.fastqs <- all.fastqs[keep]
-    renamed <- paste0(tolower(index), "_", keep.fastqs)
+    renamed <- paste0(index, "_", keep.fastqs)
     file.copy(file.path(fqsrc, keep.fastqs), file.path("fastq", renamed))
 
     curmd5 <- md5[md5[,2] %in% keep.fastqs,]
-    curmd5[,2] <- paste0(tolower(index), "_", curmd5[,2])
+    curmd5[,2] <- paste0(index, "_", curmd5[,2])
     collected.md5[[index]] <- curmd5
 }
 

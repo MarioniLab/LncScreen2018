@@ -16,6 +16,7 @@ cleaned.first <- data.frame(Library=lib.num, Condition=condition, Experiment=exp
 # Keeping only necessary libraries.
 keep <- grepl("Ambion", condition) | grepl("Dharamaco", condition) | grepl("siRNA", condition)
 keep <- keep & (!grepl("3417", condition) & !grepl("289", condition))
+keep <- keep & lib.num != "do8276"
 
 cleaned.first <- cleaned.first[keep,] 
 rownames(cleaned.first) <- NULL
@@ -44,7 +45,7 @@ cleaned.first$Compound <- compound
 
 secondlot <- read.csv(file.path(path, "real_20160907/analysis/sample_metadata.csv"), header=TRUE)
 
-lib.num <- secondlot$Library
+lib.num <- tolower(secondlot$Library)
 exp.num <- sub(".*exp", "\\1", secondlot$Sample)
 exp.num[exp.num=="4b"] <- "5"
 condition <- sub("[ _-]*exp.*", "", secondlot$Sample)
@@ -88,7 +89,7 @@ cleaned.second$Compound <- compound
 thirdlot <- read.csv(file.path(path, "real_20161212/analysis/metadata.csv"), header=TRUE)
 thirdlot <- thirdlot[,1:2]
 
-lib.num <- thirdlot$DO.numbers
+lib.num <- tolower(thirdlot$DO.numbers)
 exp.num <- sub(".*exp", "\\1", thirdlot$Description)
 exp.num[exp.num=="4b"] <- "5"
 condition <- sub("[ _-]*exp.*", "", thirdlot$Description)
