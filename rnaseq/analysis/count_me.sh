@@ -1,3 +1,9 @@
+#!/bin/bash
+#SBATCH -o log.out 
+#SBATCH -e log.err
+#SBATCH -n 4
+#SBATCH --mem 16000
+
 echo '
 anno.files <- "../../genomes/annotation/hg38.gtf"
 bam.files <- list.files("../bam", full=TRUE, pattern="bam$")
