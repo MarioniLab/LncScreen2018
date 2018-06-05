@@ -24,7 +24,7 @@ cleaned.first$Date <- 20160208
 cleaned.first$Batch <- "20160208"
 
 # Setting LOF mode:
-LOF <- "RNA inteference"
+LOF <- "RNA interference"
 
 # Setting genotype:
 genotype <- "wild type genotype"
