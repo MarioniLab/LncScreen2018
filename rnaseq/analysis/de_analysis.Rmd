@@ -1,0 +1,526 @@
+---
+title: Differential gene expression upon lncRNA knockdown with RNAi and LNA 
+author: Aaron Lun
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc_float: true
+    fig_caption: false
+---
+
+```{r, echo=FALSE, results='hide'}
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+knitr::opts_knit$set(width=100)
+options(width=100)
+if (!exists(".use.local")) { .use.local <- TRUE }
+```
+
+# Introduction
+
+## Primary data loading
+
+Loading in the counts, and ignoring the first column of gene lengths.
+
+```{r, eval=.use.local, echo=.use.local}
+all.counts <- read.table("genic_counts.tsv", header=TRUE, row.names=1, sep="\t")
+lengths <- all.counts[,1]
+all.counts <- all.counts[,-1]
+dim(all.counts)
+```
+
+Summing over the technical replicates.
+
+```{r}
+library(edgeR)
+lib.name <- sub("_.*", "", colnames(all.counts))
+all.counts <- sumTechReps(all.counts, lib.name)
+dim(all.counts)
+```
+
+Loading in the experimental design, and checking that all the samples are present.
+
+```{r, eval=.use.local, echo=.use.local}
+metadata <- read.table("../metadata.tsv", stringsAsFactors=FALSE, header=TRUE, sep="\t")
+m <- match(colnames(all.counts), metadata$Library)
+stopifnot(all(!is.na(m)))
+metadata <- metadata[m,]
+```
+
+Generating a `DGEList` object.
+
+```{r}
+require(edgeR)
+y <- DGEList(all.counts)
+y$samples$group <- metadata$Condition
+y$samples$block <- paste0(metadata$Batch, metadata$Experiment)
+table(y$samples$group)
+table(y$samples$block)
+```
+
+# Data exploration
+
+Exploring the libraries.
+
+```{r}
+colors <- rainbow(length(unique(y$samples$group)))
+adjc <- cpm(y, log=TRUE, prior=3)
+mds.out <- plotMDS(adjc, col=colors[as.integer(factor(y$samples$group))], pch=16)
+```
+
+Colouring by type of experiment (CRISPRi, siRNA or LNA).
+
+```{r}
+col <- rep("grey80", ncol(y)) # cells alone
+col[metadata$LOF=="LNA"] <- "blue"
+col[metadata$LOF=="RNA interference"] <- "red"
+plotMDS(mds.out, col=col, pch=16, label=1:ncol(y))
+```
+
+Colouring by batch.
+
+```{r}
+col <- c("purple", "grey80", "dodgerblue")[metadata$Batch]
+plotMDS(mds.out, col=col, pch=16)
+```
+
+Checking that the samples express the genes they're meant to express (or not).
+
+```{r}
+g <- factor(metadata$Condition)
+
+par(mar=c(12.1,4.1,4.1,2.1)) # 271
+plot(as.integer(g), adjc["ENSG00000231711",], xaxt="n", ylab="log-CPM", main="271", xlab="")
+axis(1, at=seq_len(nlevels(g)), levels(g), las=2)
+
+par(mar=c(12.1,4.1,4.1,2.1)) # C1
+plot(as.integer(g), adjc["ENSG00000265096",], xaxt="n", ylab="log-CPM", main="C1", xlab="")
+axis(1, at=seq_len(nlevels(g)), levels(g), las=2)
+```
+
+We save these to file for prettier plotting.
+
+```{r}
+to.save <- data.frame(Group=g, t(adjc[c("ENSG00000231711", "ENSG00000265096"),]))
+to.save <- to.save[order(to.save$Group),]
+write.table(file="key_exprs.tsv", to.save, sep="\t", quote=FALSE, col.names=NA)
+```
+
+# Filtering, normalization and annotation
+
+Removing lowly-expressed genes (mean of 3 across all libraries).
+Also removing Cas9, as it's not an interesting biological gene.
+
+```{r}
+ab <- aveLogCPM(y)
+keep <- ab > aveLogCPM(3, mean(y$samples$lib.size)) 
+y <- y[keep,]
+sum(keep)
+```
+
+Normalizing to remove composition biases.
+
+```{r}
+y <- calcNormFactors(y)
+hist(y$samples$norm.factors, col="grey80", xlab="Normalization factors")
+```
+
+Adding annotation.
+
+```{r, message=FALSE}
+require(org.Hs.eg.db)
+symb <- mapIds(org.Hs.eg.db, keys=rownames(y), keytype="ENSEMBL", column="SYMBOL")
+y$genes <- data.frame(Symbol=symb, row.names=rownames(y))
+```
+
+# Modelling the mean-variance relationship
+
+We use an additive model where each group gets its own coefficient in the matrix.
+We also add blocking factors for the various experimental terms, including the condition and the batch.
+
+```{r}
+g <- factor(y$samples$group)
+block <- factor(y$samples$block)
+design <- model.matrix(~0 + g + block)
+dim(design)
+```
+
+The first `block` level for each batch needs to be removed to achieve full rank.
+(This assumes that each block shares at least 2 groups with every other block in the same batch.)
+This is except for the first batch, where the first `block` level is automatically removed by `model.matrix`.
+
+```{r}
+QR <- qr(design)
+QR$rank # not full rank
+design <- design[,! colnames(design) %in% c("block22", "block31")]
+dim(design)
+QR <- qr(design)
+QR$rank # full rank
+```
+
+Modelling the mean-variance trend with `voom`.
+Also computing library-specific weights to downweight any outlier libraries within each group.
+
+```{r, fig.width=10, fig.height=6}
+v.all <- voomWithQualityWeights(y, design, plot=TRUE)
+```
+
+Fitting the linear model with robust empirical Bayes shrinkage to stabilize the variance estimates.
+
+```{r}
+fit <- lmFit(v.all, design)
+fit <- eBayes(fit, robust=TRUE)
+plotSA(fit)
+```
+
+Also checking the negative binomial dispersion estimates from `edgeR`.
+
+```{r}
+y <- estimateDisp(y, design)
+summary(y$trended)
+plotBCV(y)
+```
+
+# Testing for differential expression
+
+## Setting up output folders
+
+Setting up some output folders, and some functions to store results.
+
+```{r}
+dir.create("results_de", showWarning=FALSE)
+dir.create("results_lfc", showWarning=FALSE)
+WRITE <- function(fit, fname, lfc=FALSE) {
+    fname <- paste0(fname, ".txt")
+    if (lfc) {
+        res <- topTreat(fit, n=Inf, sort.by="p")
+        fname <- file.path("results_lfc", fname)
+    } else {
+        res <- topTable(fit, n=Inf, sort.by="p")
+        fname <- file.path("results_de", fname)
+    }
+    write.table(file=fname, res, col.names=NA, quote=FALSE, sep="\t")
+    head(res)
+}
+```
+
+```{r progenitor, echo=FALSE, eval=FALSE}
+fit2 <- contrasts.fit(fit, con)
+fit2 <- treat(fit2, lfc=0.5, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname, lfc=TRUE)
+```
+
+## Contrasts for siRNA
+
+### 271 depletion
+
+Testing for DE between 271 siRNA-treated cells against those treated with the Ambion control.
+
+```{r}
+fname <- "siRNA_271_vs_Ambion"
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_1,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+Testing for DE between siRNA-treated cells and those treated with the Dharmacon control.
+
+```{r}
+fname <- "siRNA_271_vs_Dharmacon"
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_1,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+### C1 depletion
+
+Testing for DE between C1 siRNA-treated cells against those treated with the Ambion control.
+
+```{r}
+fname <- "siRNA_C1_vs_Ambion"
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_2,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+Testing for DE between C1 siRNA-treated cells and those treated with the Dharmacon control.
+
+```{r}
+fname <- "siRNA_C1_vs_Dharmacon"
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_2,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+## Contrasts for LNA
+
+### 271 depletion, LNA2
+
+Testing for DE between 271 LNA2-treated cells against those treated with negative control A.
+
+```{r}
+fname <- "LNA2_271_vs_NegA"
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA2.batch_3
+        - gLNA.wild_type_genotype.Negative_control_A.batch_3,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+Testing for DE between 271 LNA2-treated cells against those treated with negative control B.
+
+```{r}
+fname <- "LNA2_271_vs_NegB"
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA2.batch_3
+        - gLNA.wild_type_genotype.Negative_control_B.batch_3,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+### 271 depletion, LNA3
+
+Testing for DE between 271 LNA3-treated cells against those treated with negative control A.
+
+```{r}
+fname <- "LNA3_271_vs_NegA"
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA3.batch_3
+        - gLNA.wild_type_genotype.Negative_control_A.batch_3,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+Testing for DE between 271 LNA3-treated cells against those treated with negative control B.
+
+```{r}
+fname <- "LNA3_271_vs_NegB"
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA3.batch_3
+        - gLNA.wild_type_genotype.Negative_control_B.batch_3,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+### C1 depletion
+
+Testing for DE between C1 LNA-treated cells against those treated with the negative control A.
+
+```{r}
+fname <- "LNA_C1_vs_NegA"
+con <- makeContrasts(
+    gLNA.wild_type_genotype.C1_LNA.batch_2
+        - gLNA.wild_type_genotype.Negative_control_A.batch_2,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+Testing for DE between C1 LNA-treated cells against those treated with negative control B.
+
+```{r}
+fname <- "LNA_C1_vs_NegB"
+con <- makeContrasts(
+    gLNA.wild_type_genotype.C1_LNA.batch_2
+        - gLNA.wild_type_genotype.Negative_control_B.batch_2,
+    levels=design)
+colnames(con) <- fname
+fit2 <- contrasts.fit(fit, con)
+fit2 <- eBayes(fit2, robust=TRUE)
+summary(decideTests(fit2))
+WRITE(fit2, fname)
+```
+
+Repeating with a log-fold change threshold of 0.5.
+
+```{r, ref.label="progenitor"}
+```
+
+# Consolidating DE results
+
+## For 271
+
+We perform a series of intersection-union tests to consolidate all DE results into a single list.
+Any gene with a log-fold change in opposing directions across a set of contrasts is given a p-value of 1.
+
+```{r}
+CONSFUN <- function(tablist) { 
+    all.other <- NULL
+    all.p <- vector("list", length(tablist))
+    names(all.p) <- names(tablist)
+    all.lfc <- all.p
+    
+    # Extracting statistics from individual comparisons.
+    for (tab in names(tablist)) {
+        out <- read.delim(tablist[[tab]], stringsAsFactors=FALSE, row.names=1)
+        out <- out[order(rownames(out)),]
+        all.lfc[[tab]] <- out$logFC
+        all.p[[tab]] <- out$P.Value
+        all.other <- out[,c("Symbol", "AveExpr")]
+    }
+    
+    # Applying an IUT. Opposing log-fold changes get p-values of 1.
+    iut.p <- do.call(pmax, all.p)
+    consistent <- abs(Reduce("+", lapply(all.lfc, sign))) == length(tablist)
+    iut.p[!consistent] <- 1
+    
+    # Creating an output table.
+    names(all.lfc) <- paste0(names(all.lfc), ".logFC")
+    names(all.p) <- paste0(names(all.lfc), ".P.Value")
+    output <- data.frame(all.other, 
+        all.lfc, all.p, P.Value=iut.p,
+        adj.P.Val=p.adjust(iut.p, method="BH"))
+    output[order(output$P.Value),]
+}
+```
+
+We run this on the TREAT results for 271:
+
+```{r}
+out <- CONSFUN(list(
+    RNAi_Ambion="results_lfc/siRNA_271_vs_Ambion.txt",
+    RNAi_Dharmacon="results_lfc/siRNA_271_vs_Dharmacon.txt",
+    LNA2_NegA="results_lfc/LNA2_271_vs_NegA.txt",
+    LNA2_NegB="results_lfc/LNA2_271_vs_NegB.txt",
+    LNA3_NegA="results_lfc/LNA3_271_vs_NegA.txt",
+    LNA3_NegB="results_lfc/LNA3_271_vs_NegB.txt")
+)
+write.table(file="results_lfc/cons_271.txt", out, sep="\t", quote=FALSE, col.names=NA)
+```
+
+... and on the general DE results:
+
+
+```{r}
+out <- CONSFUN(list(
+    RNAi_Ambion="results_de/siRNA_271_vs_Ambion.txt",
+    RNAi_Dharmacon="results_de/siRNA_271_vs_Dharmacon.txt",
+    LNA2_NegA="results_de/LNA2_271_vs_NegA.txt",
+    LNA2_NegB="results_de/LNA2_271_vs_NegB.txt",
+    LNA3_NegA="results_de/LNA3_271_vs_NegA.txt",
+    LNA3_NegB="results_de/LNA3_271_vs_NegB.txt")
+)
+write.table(file="results_de/cons_271.txt", out, sep="\t", quote=FALSE, col.names=NA)
+```
+
+## For C1 
+
+We run this on the TREAT results for C1:
+
+```{r}
+out <- CONSFUN(list(
+    RNAi_Ambion="results_lfc/siRNA_C1_vs_Ambion.txt",
+    RNAi_Dharmacon="results_lfc/siRNA_C1_vs_Dharmacon.txt",
+    LNA3_NegA="results_lfc/LNA_C1_vs_NegA.txt",
+    LNA3_NegB="results_lfc/LNA_C1_vs_NegB.txt")
+)
+write.table(file="results_lfc/cons_C1.txt", out, sep="\t", quote=FALSE, col.names=NA)
+```
+
+... and on the general DE results:
+
+
+```{r}
+out <- CONSFUN(list(
+    RNAi_Ambion="results_de/siRNA_C1_vs_Ambion.txt",
+    RNAi_Dharmacon="results_de/siRNA_C1_vs_Dharmacon.txt",
+    LNA3_NegA="results_de/LNA_C1_vs_NegA.txt",
+    LNA3_NegB="results_de/LNA_C1_vs_NegB.txt")
+)
+write.table(file="results_de/cons_C1.txt", out, sep="\t", quote=FALSE, col.names=NA)
+```
+
+# Session information
+
+```{r}
+saveRDS(file="object.rds", y)
+sessionInfo()
+```
