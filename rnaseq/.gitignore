@@ -3,3 +3,10 @@
 *.html
 count_me.R*
 results_*
+*.log
+*.out
+*.err
+bam/
+bedgraph/
+logs/
+fastq/
