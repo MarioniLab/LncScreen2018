@@ -97,6 +97,7 @@ cleaned.third <- data.frame(Library=lib.num, Condition=condition, Experiment=exp
 
 # Keeping only necessary libraries.
 keep <- grepl("^271", condition) | grepl("^Neg", condition)
+keep <- keep & !grepl("LNA3", condition) # ignoring LNA3 results.
 
 cleaned.third <- cleaned.third[keep,] 
 rownames(cleaned.third) <- NULL
@@ -114,8 +115,7 @@ compound <- character(nrow(cleaned.third))
 
 compound[cleaned.third$Condition=="NegA"] <- "Negative control A"
 compound[cleaned.third$Condition=="NegB"] <- "Negative control B"
-compound[cleaned.third$Condition=="271 exon1_LNA2"] <- "271 LNA2"
-compound[cleaned.third$Condition=="271 exon1_LNA3"] <- "271 LNA3"
+compound[cleaned.third$Condition=="271 exon1_LNA2"] <- "271 LNA"
  
 # Creating a new group.
 cleaned.third$LOF <- LOF

@@ -298,14 +298,12 @@ Repeating with a log-fold change threshold of 0.5.
 
 ## Contrasts for LNA
 
-### 271 depletion, LNA2
-
-Testing for DE between 271 LNA2-treated cells against those treated with negative control A.
+Testing for DE between 271 LNA-treated cells against those treated with negative control A.
 
 ```{r}
-fname <- "LNA2_271_vs_NegA"
+fname <- "LNA_271_vs_NegA"
 con <- makeContrasts(
-    gLNA.wild_type_genotype.271_LNA2.batch_3
+    gLNA.wild_type_genotype.271_LNA.batch_3
         - gLNA.wild_type_genotype.Negative_control_A.batch_3,
     levels=design)
 colnames(con) <- fname
@@ -320,54 +318,12 @@ Repeating with a log-fold change threshold of 0.5.
 ```{r, ref.label="progenitor"}
 ```
 
-Testing for DE between 271 LNA2-treated cells against those treated with negative control B.
+Testing for DE between 271 LNA-treated cells against those treated with negative control B.
 
 ```{r}
-fname <- "LNA2_271_vs_NegB"
+fname <- "LNA_271_vs_NegB"
 con <- makeContrasts(
-    gLNA.wild_type_genotype.271_LNA2.batch_3
-        - gLNA.wild_type_genotype.Negative_control_B.batch_3,
-    levels=design)
-colnames(con) <- fname
-fit2 <- contrasts.fit(fit, con)
-fit2 <- eBayes(fit2, robust=TRUE)
-summary(decideTests(fit2))
-WRITE(fit2, fname)
-```
-
-Repeating with a log-fold change threshold of 0.5.
-
-```{r, ref.label="progenitor"}
-```
-
-### 271 depletion, LNA3
-
-Testing for DE between 271 LNA3-treated cells against those treated with negative control A.
-
-```{r}
-fname <- "LNA3_271_vs_NegA"
-con <- makeContrasts(
-    gLNA.wild_type_genotype.271_LNA3.batch_3
-        - gLNA.wild_type_genotype.Negative_control_A.batch_3,
-    levels=design)
-colnames(con) <- fname
-fit2 <- contrasts.fit(fit, con)
-fit2 <- eBayes(fit2, robust=TRUE)
-summary(decideTests(fit2))
-WRITE(fit2, fname)
-```
-
-Repeating with a log-fold change threshold of 0.5.
-
-```{r, ref.label="progenitor"}
-```
-
-Testing for DE between 271 LNA3-treated cells against those treated with negative control B.
-
-```{r}
-fname <- "LNA3_271_vs_NegB"
-con <- makeContrasts(
-    gLNA.wild_type_genotype.271_LNA3.batch_3
+    gLNA.wild_type_genotype.271_LNA.batch_3
         - gLNA.wild_type_genotype.Negative_control_B.batch_3,
     levels=design)
 colnames(con) <- fname
@@ -468,12 +424,11 @@ We run this on the TREAT results for 271:
 out <- CONSFUN(list(
     RNAi_Ambion="results_lfc/siRNA_271_vs_Ambion.txt",
     RNAi_Dharmacon="results_lfc/siRNA_271_vs_Dharmacon.txt",
-    LNA2_NegA="results_lfc/LNA2_271_vs_NegA.txt",
-    LNA2_NegB="results_lfc/LNA2_271_vs_NegB.txt",
-    LNA3_NegA="results_lfc/LNA3_271_vs_NegA.txt",
-    LNA3_NegB="results_lfc/LNA3_271_vs_NegB.txt")
+    LNA_NegA="results_lfc/LNA_271_vs_NegA.txt",
+    LNA_NegB="results_lfc/LNA_271_vs_NegB.txt")
 )
 write.table(file="results_lfc/cons_271.txt", out, sep="\t", quote=FALSE, col.names=NA)
+head(out)
 ```
 
 ... and on the general DE results:
@@ -483,12 +438,11 @@ write.table(file="results_lfc/cons_271.txt", out, sep="\t", quote=FALSE, col.nam
 out <- CONSFUN(list(
     RNAi_Ambion="results_de/siRNA_271_vs_Ambion.txt",
     RNAi_Dharmacon="results_de/siRNA_271_vs_Dharmacon.txt",
-    LNA2_NegA="results_de/LNA2_271_vs_NegA.txt",
-    LNA2_NegB="results_de/LNA2_271_vs_NegB.txt",
-    LNA3_NegA="results_de/LNA3_271_vs_NegA.txt",
-    LNA3_NegB="results_de/LNA3_271_vs_NegB.txt")
+    LNA_NegA="results_de/LNA_271_vs_NegA.txt",
+    LNA_NegB="results_de/LNA_271_vs_NegB.txt")
 )
 write.table(file="results_de/cons_271.txt", out, sep="\t", quote=FALSE, col.names=NA)
+head(out)
 ```
 
 ## For C1 
@@ -503,6 +457,7 @@ out <- CONSFUN(list(
     LNA3_NegB="results_lfc/LNA_C1_vs_NegB.txt")
 )
 write.table(file="results_lfc/cons_C1.txt", out, sep="\t", quote=FALSE, col.names=NA)
+head(out)
 ```
 
 ... and on the general DE results:
@@ -516,6 +471,7 @@ out <- CONSFUN(list(
     LNA3_NegB="results_de/LNA_C1_vs_NegB.txt")
 )
 write.table(file="results_de/cons_C1.txt", out, sep="\t", quote=FALSE, col.names=NA)
+head(out)
 ```
 
 # Session information
