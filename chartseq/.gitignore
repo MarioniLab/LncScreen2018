@@ -1,0 +1,12 @@
+*.html
+out_*.rds
+de_*.Rmd
+*.tsv
+*.bed
+*.err
+*.out
+*.log
+bedgraph/
+bam/
+logs/
+fastq/
