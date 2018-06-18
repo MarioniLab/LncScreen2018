@@ -30,7 +30,11 @@ We remove duplicate reads that form problematic stacks, as well as reads in know
 
 ```{r}
 library(rtracklayer)
-black <- import("http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz")
+library(BiocFileCache)
+bfc <- BiocFileCache("../../data_store", ask=FALSE)
+bl.path <- bfcrpath(bfc, 
+    "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz")
+black <- import(bl.path)
 
 library(csaw)
 param <- readParam(minq=10, pe="both", discard=black, dedup=TRUE, max.frag=1000)

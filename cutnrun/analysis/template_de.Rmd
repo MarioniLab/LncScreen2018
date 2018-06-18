@@ -45,9 +45,14 @@ We remove duplicated read pairs or reads with quality scores below 10.
 We also use the ENCODE hg38 blacklist to ignore reads in problematic regions.
 
 ```{r}
-library(csaw)
 library(rtracklayer)
-black <- import("http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz")
+library(BiocFileCache)
+bfc <- BiocFileCache("../../../data_store", ask=FALSE)
+bl.path <- bfcrpath(bfc, 
+    "http://mitra.stanford.edu/kundaje/akundaje/release/blacklists/hg38-human/hg38.blacklist.bed.gz")
+black <- import(bl.path)
+
+library(csaw)
 param <- readParam(dedup=TRUE, minq=10, discard=black, pe="both", max.frag=1000)
 param
 ```
