@@ -22,4 +22,26 @@ genome(trans) <- "hg38"
 
 transeq <- getSeq(BSgenome.Hsapiens.UCSC.hg38, trans)
 transeq <- lapply(transeq, paste, collapse="")
-writeXStringSet(DNAStringSet(unlist(transeq)), file="LINC00899.fa")
+transeq <- DNAStringSet(unlist(transeq))
+writeXStringSet(transeq, file="LINC00899.fa")
+
+# Comparing the best pairwise alignments with and without shuffling.
+
+pdf("alignments.pdf")
+for (x in names(ref)) {
+    for (y in names(transeq)) {
+        new.refs <- character(100)
+        seq.src <- strsplit(as.character(ref[[x]]), "")[[1]]
+        for (i in seq_along(new.refs)) {
+            new.refs[i] <- paste(seq.src[sample(length(seq.src))], collapse="")
+        }
+        aln.g.f <- pairwiseAlignment(DNAStringSet(new.refs), subject=transeq[y], type="local", scoreOnly=TRUE)
+        aln.g.r <- pairwiseAlignment(reverseComplement(DNAStringSet(new.refs)), subject=transeq[y], type="local", scoreOnly=TRUE)
+        hist(pmax(aln.g.f, aln.g.r), xlab="Score", col="grey80", breaks=20, main=paste(x, "on", y))
+
+        aln.f <- pairwiseAlignment(ref[x], subject=transeq[y], type="local", scoreOnly=TRUE)
+        aln.r <- pairwiseAlignment(reverseComplement(ref[x]), subject=transeq[y], type="local", scoreOnly=TRUE)
+        abline(v=pmax(aln.f, aln.r), col="red", lwd=2, lty=2)
+    }
+}
+dev.off()
