@@ -90,6 +90,7 @@ We assemble all of these statistics into a table for convenient examination.
 ```{r}
 output <- data.frame(as.data.frame(merged$region)[,1:3], tabemp, 
     best.logFC=tabbest$logFC, surrounds)
+output$PValue.neg <- NULL # to avoid confusion.    
 output <- output[order(output$PValue),]    
 write.table(file="db_regions.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)        
@@ -108,6 +109,7 @@ We take all binding sites at a FDR of 30% (which is large, but the data are simp
 ```{r}
 sig.sites <- merged$region[tabemp$FDR <= 0.3]
 seqlevels(sig.sites) <- sub("^chr", "", seqlevels(sig.sites))
+length(sig.sites)
 
 prom.reg <- promoters(EnsDb.Hsapiens.v86, upstream=3000, downstream=500)
 suppressWarnings(olap.prom <- overlapsAny(sig.sites, prom.reg))
@@ -131,6 +133,39 @@ intron.reg <- intronicParts(EnsDb.Hsapiens.v86)
 suppressWarnings(olap.intron <- overlapsAny(sig.sites, intron.reg))
 
 remaining <- !logical(length(sig.sites))
+collected <- list()
+collected$Promoter <- sum(remaining & olap.prom)
+remaining <- remaining & !olap.prom
+collected$Exon <- sum(remaining & olap.exon)
+remaining <- remaining & !olap.exon
+collected$Enhancer <- sum(remaining & olap.enh)
+remaining <- remaining & !olap.enh
+collected$Intron <- sum(remaining & olap.intron)
+remaining <- remaining & !olap.intron
+collected$Intergenic <- sum(remaining)
+DataFrame(collected)
+```
+
+For comparison, we do the same with the corresponding number of sites that are changing in the wrong direction.
+
+```{r}
+chosen <- tabemp$PValue.neg <= max(tabemp$PValue[tabemp$FDR <= 0.3])
+fake.sites <- merged$region[chosen]
+seqlevels(fake.sites) <- sub("^chr", "", seqlevels(fake.sites))
+length(fake.sites)
+
+suppressWarnings(olap.prom <- overlapsAny(fake.sites, prom.reg))
+sum(olap.prom)
+
+suppressWarnings(olap.exon <- overlapsAny(fake.sites, exon.reg))
+sum(olap.exon)
+
+suppressWarnings(olap.enh <- overlapsAny(fake.sites, enh.reg))
+sum(olap.enh)
+
+suppressWarnings(olap.intron <- overlapsAny(fake.sites, intron.reg))
+
+remaining <- !logical(length(fake.sites))
 collected <- list()
 collected$Promoter <- sum(remaining & olap.prom)
 remaining <- remaining & !olap.prom
@@ -217,6 +252,7 @@ We save this result to file.
 output <- data.frame(anno, tabemp, best.logFC=tabbest$logFC) 
 output <- output[order(output$PValue),]    
 output <- output[!is.na(output$PValue),]
+output$PValue.neg <- NULL # to avoid confusion.    
 write.table(file="db_genes.tsv", output,
     row.names=FALSE, sep="\t", quote=FALSE)
 head(output)
