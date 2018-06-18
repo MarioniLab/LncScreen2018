@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   BiocStyle::html_document:
     fig_caption: false
+    toc_float: yes
 ---
 
 ```{r, echo=FALSE, results="hide"}
@@ -99,6 +100,49 @@ head(output)
 gc()
 ```
 
+# Characterizing the binding profile
+
+We explore whether the binding sites are likely to occur in promoters, exons, introns or intergenic regions.
+We take all binding sites at a FDR of 30% (which is large, but the data are simply that noisy).
+
+```{r}
+sig.sites <- merged$region[tabemp$FDR <= 0.3]
+seqlevels(sig.sites) <- sub("^chr", "", seqlevels(sig.sites))
+
+prom.reg <- promoters(EnsDb.Hsapiens.v86, upstream=3000, downstream=500)
+suppressWarnings(olap.prom <- overlapsAny(sig.sites, prom.reg))
+sum(olap.prom)
+
+exon.reg <- exons(EnsDb.Hsapiens.v86)
+suppressWarnings(olap.exon <- overlapsAny(sig.sites, exon.reg))
+sum(olap.exon)
+
+# Loading human enhancers
+library(rtracklayer)
+library(BiocFileCache)
+bfc <- BiocFileCache("../../data_store", ask = FALSE)
+enh.loc <- bfcrpath(bfc, "http://enhanceratlas.org/data/enhseq/human/Hela.fasta")
+enh.reg <- GRanges(sub("_.*", "", names(import(enh.loc))))
+seqlevels(enh.reg) <- sub("^chr", "", seqlevels(enh.reg))    
+suppressWarnings(olap.enh <- overlapsAny(sig.sites, enh.reg))
+sum(olap.enh)
+
+intron.reg <- intronicParts(EnsDb.Hsapiens.v86)
+suppressWarnings(olap.intron <- overlapsAny(sig.sites, intron.reg))
+
+remaining <- !logical(length(sig.sites))
+collected <- list()
+collected$Promoter <- sum(remaining & olap.prom)
+remaining <- remaining & !olap.prom
+collected$Exon <- sum(remaining & olap.exon)
+remaining <- remaining & !olap.exon
+collected$Enhancer <- sum(remaining & olap.enh)
+remaining <- remaining & !olap.enh
+collected$Intron <- sum(remaining & olap.intron)
+remaining <- remaining & !olap.intron
+collected$Intergenic <- sum(remaining)
+DataFrame(collected)
+```
 
 # Reporting DB genes
 
