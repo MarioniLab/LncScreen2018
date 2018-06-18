@@ -382,7 +382,7 @@ Repeating with a log-fold change threshold of 0.5.
 
 # Consolidating DE results
 
-## For 271
+## Overview
 
 We perform a series of intersection-union tests to consolidate all DE results into a single list.
 Any gene with a log-fold change in opposing directions across a set of contrasts is given a p-value of 1.
@@ -409,8 +409,8 @@ CONSFUN <- function(tablist) {
     iut.p[!consistent] <- 1
     
     # Creating an output table.
-    names(all.lfc) <- paste0(names(all.lfc), ".logFC")
     names(all.p) <- paste0(names(all.lfc), ".P.Value")
+    names(all.lfc) <- paste0(names(all.lfc), ".logFC")
     output <- data.frame(all.other, 
         all.lfc, all.p, P.Value=iut.p,
         adj.P.Val=p.adjust(iut.p, method="BH"))
@@ -418,60 +418,194 @@ CONSFUN <- function(tablist) {
 }
 ```
 
-We run this on the TREAT results for 271:
+## For 271
+
+### With a log-fold change threshold
+
+We run this on the TREAT results for 271.
+Firstly we combine the RNAi results:
 
 ```{r}
-out <- CONSFUN(list(
+outS <- CONSFUN(list(
+    RNAi_Ambion="results_lfc/siRNA_271_vs_Ambion.txt",
+    RNAi_Dharmacon="results_lfc/siRNA_271_vs_Dharmacon.txt")
+)
+write.table(file="results_lfc/cons_271_RNAi.txt", outS, sep="\t", quote=FALSE, col.names=NA)
+head(outS)
+```
+
+... then the LNA results:
+
+```{r}
+outL <- CONSFUN(list(
+    LNA_NegA="results_lfc/LNA_271_vs_NegA.txt",
+    LNA_NegB="results_lfc/LNA_271_vs_NegB.txt")
+)
+write.table(file="results_lfc/cons_271_LNA.txt", outL, sep="\t", quote=FALSE, col.names=NA)
+head(outL)
+```
+
+... and finally, all comparisons together:
+
+```{r}
+outA <- CONSFUN(list(
     RNAi_Ambion="results_lfc/siRNA_271_vs_Ambion.txt",
     RNAi_Dharmacon="results_lfc/siRNA_271_vs_Dharmacon.txt",
     LNA_NegA="results_lfc/LNA_271_vs_NegA.txt",
     LNA_NegB="results_lfc/LNA_271_vs_NegB.txt")
 )
-write.table(file="results_lfc/cons_271.txt", out, sep="\t", quote=FALSE, col.names=NA)
-head(out)
+write.table(file="results_lfc/cons_271_all.txt", outA, sep="\t", quote=FALSE, col.names=NA)
+head(outA)
 ```
 
-... and on the general DE results:
-
+We examine the intersection between the different technologies.
 
 ```{r}
-out <- CONSFUN(list(
+threshold <- max(outA$P.Value[outA$adj.P.Val <= 0.05])
+DataFrame(RNAi=sum(outS$P.Value <= threshold),
+          LNA=sum(outL$P.Value <= threshold),
+          All=sum(outA$P.Value <= threshold))
+```
+
+### Without a log-fold change threshold
+
+We repeat this for the general DE results, first for RNAi:
+
+```{r}
+outS <- CONSFUN(list(
+    RNAi_Ambion="results_de/siRNA_271_vs_Ambion.txt",
+    RNAi_Dharmacon="results_de/siRNA_271_vs_Dharmacon.txt")
+)
+write.table(file="results_de/cons_271_RNAi.txt", outS, sep="\t", quote=FALSE, col.names=NA)
+head(outS)
+```
+
+... then for LNA:
+
+```{r}
+outL <- CONSFUN(list(
+    LNA_NegA="results_de/LNA_271_vs_NegA.txt",
+    LNA_NegB="results_de/LNA_271_vs_NegB.txt")
+)
+write.table(file="results_de/cons_271_LNA.txt", outL, sep="\t", quote=FALSE, col.names=NA)
+head(outL)
+```
+
+... and finally, all comparisons together:
+
+```{r}
+outA <- CONSFUN(list(
     RNAi_Ambion="results_de/siRNA_271_vs_Ambion.txt",
     RNAi_Dharmacon="results_de/siRNA_271_vs_Dharmacon.txt",
     LNA_NegA="results_de/LNA_271_vs_NegA.txt",
     LNA_NegB="results_de/LNA_271_vs_NegB.txt")
 )
-write.table(file="results_de/cons_271.txt", out, sep="\t", quote=FALSE, col.names=NA)
-head(out)
+write.table(file="results_de/cons_271_all.txt", outA, sep="\t", quote=FALSE, col.names=NA)
+head(outA)
 ```
 
-## For C1 
-
-We run this on the TREAT results for C1:
+We examine the intersection between the different technologies.
 
 ```{r}
-out <- CONSFUN(list(
+threshold <- max(outA$P.Value[outA$adj.P.Val <= 0.05])
+DataFrame(RNAi=sum(outS$P.Value <= threshold),
+          LNA=sum(outL$P.Value <= threshold),
+          All=sum(outA$P.Value <= threshold))
+```
+
+## For C1
+
+### With a log-fold change threshold
+
+We run this on the TREAT results for C1.
+Firstly we combine the RNAi results:
+
+```{r}
+outS <- CONSFUN(list(
+    RNAi_Ambion="results_lfc/siRNA_C1_vs_Ambion.txt",
+    RNAi_Dharmacon="results_lfc/siRNA_C1_vs_Dharmacon.txt")
+)
+write.table(file="results_lfc/cons_C1_RNAi.txt", outS, sep="\t", quote=FALSE, col.names=NA)
+head(outS)
+```
+
+... then the LNA results:
+
+```{r}
+outL <- CONSFUN(list(
+    LNA_NegA="results_lfc/LNA_C1_vs_NegA.txt",
+    LNA_NegB="results_lfc/LNA_C1_vs_NegB.txt")
+)
+write.table(file="results_lfc/cons_C1_LNA.txt", outL, sep="\t", quote=FALSE, col.names=NA)
+head(outL)
+```
+
+... and finally, all comparisons together:
+
+```{r}
+outA <- CONSFUN(list(
     RNAi_Ambion="results_lfc/siRNA_C1_vs_Ambion.txt",
     RNAi_Dharmacon="results_lfc/siRNA_C1_vs_Dharmacon.txt",
-    LNA3_NegA="results_lfc/LNA_C1_vs_NegA.txt",
-    LNA3_NegB="results_lfc/LNA_C1_vs_NegB.txt")
+    LNA_NegA="results_lfc/LNA_C1_vs_NegA.txt",
+    LNA_NegB="results_lfc/LNA_C1_vs_NegB.txt")
 )
-write.table(file="results_lfc/cons_C1.txt", out, sep="\t", quote=FALSE, col.names=NA)
-head(out)
+write.table(file="results_lfc/cons_C1_all.txt", outA, sep="\t", quote=FALSE, col.names=NA)
+head(outA)
 ```
 
-... and on the general DE results:
-
+We examine the intersection between the different technologies.
 
 ```{r}
-out <- CONSFUN(list(
+threshold <- max(outA$P.Value[outA$adj.P.Val <= 0.05])
+DataFrame(RNAi=sum(outS$P.Value <= threshold),
+          LNA=sum(outL$P.Value <= threshold),
+          All=sum(outA$P.Value <= threshold))
+```
+
+### Without a log-fold change threshold
+
+We repeat this for the general DE results, first for RNAi:
+
+```{r}
+outS <- CONSFUN(list(
+    RNAi_Ambion="results_de/siRNA_C1_vs_Ambion.txt",
+    RNAi_Dharmacon="results_de/siRNA_C1_vs_Dharmacon.txt")
+)
+write.table(file="results_de/cons_C1_RNAi.txt", outS, sep="\t", quote=FALSE, col.names=NA)
+head(outS)
+```
+
+... then for LNA:
+
+```{r}
+outL <- CONSFUN(list(
+    LNA_NegA="results_de/LNA_C1_vs_NegA.txt",
+    LNA_NegB="results_de/LNA_C1_vs_NegB.txt")
+)
+write.table(file="results_de/cons_C1_LNA.txt", outL, sep="\t", quote=FALSE, col.names=NA)
+head(outL)
+```
+
+... and finally, all comparisons together:
+
+```{r}
+outA <- CONSFUN(list(
     RNAi_Ambion="results_de/siRNA_C1_vs_Ambion.txt",
     RNAi_Dharmacon="results_de/siRNA_C1_vs_Dharmacon.txt",
-    LNA3_NegA="results_de/LNA_C1_vs_NegA.txt",
-    LNA3_NegB="results_de/LNA_C1_vs_NegB.txt")
+    LNA_NegA="results_de/LNA_C1_vs_NegA.txt",
+    LNA_NegB="results_de/LNA_C1_vs_NegB.txt")
 )
-write.table(file="results_de/cons_C1.txt", out, sep="\t", quote=FALSE, col.names=NA)
-head(out)
+write.table(file="results_de/cons_C1_all.txt", outA, sep="\t", quote=FALSE, col.names=NA)
+head(outA)
+```
+
+We examine the intersection between the different technologies.
+
+```{r}
+threshold <- max(outA$P.Value[outA$adj.P.Val <= 0.05])
+DataFrame(RNAi=sum(outS$P.Value <= threshold),
+          LNA=sum(outL$P.Value <= threshold),
+          All=sum(outA$P.Value <= threshold))
 ```
 
 # Session information
