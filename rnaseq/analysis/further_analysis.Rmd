@@ -1,0 +1,242 @@
+---
+title: Further analysis of the DE results
+author: Aaron Lun
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc_float: true
+    fig_caption: false
+---
+
+```{r, echo=FALSE, results='hide'}
+knitr::opts_chunk$set(error=FALSE, message=FALSE, warning=FALSE)
+knitr::opts_knit$set(width=100)
+options(width=100)
+```
+
+# Checking for cell cycle effects
+
+## Obtaining the terms in the KEGG pathway
+
+We identify the genes in the "cell cycle" KEGG term.
+The aim is to specifically check for differential expression in this term, given our observations of a mitotic phenotype.
+
+```{r}
+library(org.Hs.eg.db)
+anno <- select(org.Hs.eg.db, keys="04110", keytype="PATH", columns="ENSEMBL")
+head(anno)
+y <- readRDS("object.rds")
+design <- y$design
+present <- rownames(y) %in% anno$ENSEMBL
+summary(present)
+```
+
+## For 271
+
+### ROAST 
+
+We use `roast` to check for whether there is any absolute change in the set of cell cycle-related genes in the various 271 comparisons.
+In other words, is there any consistent DE within the set?
+
+```{r}
+set.seed(1000)
+
+# RNAi, Ambion
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_1,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+
+# RNAi, Dharmacon 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_2,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+
+# LNA, negative A
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_A.batch_3,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+
+# LNA, negative B
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_B.batch_3,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+```
+
+### CAMERA 
+
+We use `camera` to check for whether there is any relative change in the set of cell cycle-related genes in the various 271 comparisons.
+In other words, is the DE within the set greater than the DE outside the set?
+
+```{r}
+# RNAi, Ambion
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_1,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+
+# RNAi, Dharmacon 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_2,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+
+# LNA, negative A
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_A.batch_3,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+
+# LNA, negative B
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_B.batch_3,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+```
+
+## For C1 
+
+### ROAST 
+
+We use `roast` to check for whether there is any absolute change in the set of cell cycle-related genes in the various C1 comparisons.
+
+```{r}
+set.seed(1000)
+
+# RNAi, Ambion
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_2,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+
+# RNAi, Dharmacon 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_2,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+
+# LNA, negative A
+con <- makeContrasts(
+    gLNA.wild_type_genotype.C1_LNA.batch_2
+        - gLNA.wild_type_genotype.Negative_control_A.batch_2,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+
+# LNA, negative B
+con <- makeContrasts(
+    gLNA.wild_type_genotype.C1_LNA.batch_2
+        - gLNA.wild_type_genotype.Negative_control_B.batch_2,
+    levels=design)
+roast(y, design=design, contrast=con, index=present)
+```
+
+### CAMERA 
+
+We use `camera` to check for whether there is any relative change in the set of cell cycle-related genes in the various C1 comparisons.
+
+```{r}
+# RNAi, Ambion
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_2,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+
+# RNAi, Dharmacon 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_2,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+
+# LNA, negative A
+con <- makeContrasts(
+    gLNA.wild_type_genotype.C1_LNA.batch_2
+        - gLNA.wild_type_genotype.Negative_control_A.batch_2,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+
+# LNA, negative B
+con <- makeContrasts(
+    gLNA.wild_type_genotype.C1_LNA.batch_2
+        - gLNA.wild_type_genotype.Negative_control_B.batch_2,
+    levels=design)
+camera(y, design=design, contrast=con, index=present)
+```
+
+# General gene set analyses
+
+## Setting up some functions
+
+Setting up a helper function to run the analyses quickly.
+
+```{r}
+dir.create("pathways")
+FUN <- function(res) { 
+    res$Entrez <- mapIds(org.Hs.eg.db, keys=rownames(res), keytype="ENSEMBL", column="ENTREZID")
+    res <- res[!is.na(res$Entrez),]
+    out <- kegga(res$Entrez[res$adj.P.Val <= 0.05], universe=res$Entrez)
+    out <- out[order(out$P.DE),]
+    out$FDR <- p.adjust(out$P.DE, method="BH")
+    return(out)
+}
+```
+
+## For 271
+
+We use the `kegga` function to examine the set of genes that are DE for RNAi. 
+
+```{r}
+res <- read.table("results_lfc/cons_271_RNAi.txt", header=TRUE, stringsAsFactors=FALSE)
+out <- FUN(res)
+write.table(file="pathways/kegg_271_RNAi.txt", col.names=NA, sep="\t", quote=FALSE, out)
+head(out)
+```
+
+Same for LNA.
+
+```{r}
+res <- read.table("results_lfc/cons_271_LNA.txt", header=TRUE, stringsAsFactors=FALSE)
+out <- FUN(res)
+write.table(file="pathways/kegg_271_LNA.txt", col.names=NA, sep="\t", quote=FALSE, out)
+head(out)
+```
+
+## For C1
+
+Same for C1 RNAi:
+
+```{r}
+res <- read.table("results_lfc/cons_C1_RNAi.txt", header=TRUE, stringsAsFactors=FALSE)
+out <- FUN(res)
+write.table(file="pathways/kegg_C1_RNAi.txt", col.names=NA, sep="\t", quote=FALSE, out)
+head(out)
+```
+
+And LNA:
+
+```{r}
+res <- read.table("results_lfc/cons_C1_LNA.txt", header=TRUE, stringsAsFactors=FALSE)
+out <- FUN(res)
+write.table(file="pathways/kegg_C1_LNA.txt", col.names=NA, sep="\t", quote=FALSE, out)
+head(out)
+```
+
+# Wrapping up
+
+```{r}
+sessionInfo()
+```
