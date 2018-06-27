@@ -106,12 +106,12 @@ for (loc in names(all.regions)) {
         }
 
         # Making the plot.
-        pdf(paste0(comparison, "_", f, "_all.pdf"), height=12, width=8)
+        pdf(paste0(comparison, "_", gsub("\\s", "-", f), "_all.pdf"), height=12, width=8)
         plotTracks(c(list(itrack, gtrack), unlist(all.tracks), list(grtrack)), from=start(REQUESTED), to=end(REQUESTED), 
                 transcriptAnnotation = "symbol")
         dev.off()
 
-        pdf(paste0(comparison, "_", f, "_mean.pdf"), height=12, width=8)
+        pdf(paste0(comparison, "_", gsub("\\s", "-", f), "_mean.pdf"), height=12, width=8)
         plotTracks(c(list(itrack, gtrack), mean.tracks, list(grtrack)), from=start(REQUESTED), to=end(REQUESTED), 
                 transcriptAnnotation = "symbol")
         dev.off()
