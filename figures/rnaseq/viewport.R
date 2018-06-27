@@ -39,7 +39,7 @@ all.files <- list(RNAi=list(`271`=c(
 colors <- list(RNAi=c(`271`="red", Ambion="salmon", Dharmacon="violet"),
     LNA=c(`271`="blue", `Negative A`="dodgerblue", `Negative B`="lightblue"))
 
-all.bound <- list(TPPP=c(RNAi=1, LNA=1),
+bounds <- list(TPPP=c(RNAi=1, LNA=1),
     `271`=c(RNAi=1, LNA=1))
 
 # Pre-work.
@@ -81,7 +81,7 @@ for (loc in names(all.regions)) {
         FILES <- all.files[[comparison]]
         all.tracks <- list()
         mean.tracks <- list()
-        cur.bound <- bound[[loc]][comparison]
+        cur.bound <- bounds[[loc]][comparison]
 
         for (f in names(FILES)) {
             CUR.FILES <- FILES[[f]]
@@ -90,13 +90,16 @@ for (loc in names(all.regions)) {
             
             mean.cov <- 0
             for (i in seq_along(CUR.FILES)) {
-                fpath <- file.path("../../rnaseq/analysis/bedgraph", paste0(CUR.FILES[i], ifelse(FORWARD, "_F", "_R"), ".bedgraph.gz"))
+                fpath <- file.path("../../rnaseq/analysis/bedgraph", paste0(CUR.FILES[i], ifelse(FORWARD, "_R", "_F"), ".bedgraph.gz"))
                 cmd <- sprintf("zcat %s | grep '^%s'", fpath, CHR)
                 X <- import(pipe(cmd), format="bedgraph") # Restricting the input, otherwise memory usage explodes.
                 seqlevels(X) <- CHR
-                cur.tracks[[i]] <- DataTrack(range = X, genome = "hg38",  
+
+                X0 <- restrict(X, start(REQUESTED), end(REQUESTED))
+                cur.tracks[[i]] <- DataTrack(range = X0, genome = "hg38",  
                     type = "histogram", chromosome = CHR, name = paste(f, i),
                     col.histogram = cur.color, fill.histogram = cur.color, ylim=c(0, cur.bound))
+                
                 mean.cov <- mean.cov + Rle(values=X$score, lengths=width(X))
             }
 
@@ -105,7 +108,9 @@ for (loc in names(all.regions)) {
             ends <- cumsum(runLength(mean.cov))
             mean.range <- GRanges(CHR, IRanges(ends - runLength(mean.cov), ends))
             mean.range$score <- runValue(mean.cov)
-            mean.tracks[[f]] <- DataTrack(range = mean.range, genome = "hg38",
+
+            mean0 <- restrict(mean.range, start(REQUESTED), end(REQUESTED))
+            mean.tracks[[f]] <- DataTrack(range = mean0, genome = "hg38",
                 type = "histogram", chromosome = CHR, name = f,
                 col.histogram = cur.color, fill.histogram = cur.color, ylim=c(0, cur.bound))
         }
