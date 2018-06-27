@@ -3,41 +3,44 @@ all.regions <- list(TPPP=GRanges("chr5", IRanges(659862,693395)),
                     `271`=GRanges("chr22", IRanges(46041009, 46044853)))
 
 all.files <- list(RNAi=list(`271`=c(
-            "do8280_RNA_interference.wild_type_genotype.271_siRNA.batch_1.bedgraph.gz",
-            "do8288_RNA_interference.wild_type_genotype.271_siRNA.batch_1.bedgraph.gz",
-            "do8308_RNA_interference.wild_type_genotype.271_siRNA.batch_1.bedgraph.gz",
-            "do8316_RNA_interference.wild_type_genotype.271_siRNA.batch_1.bedgraph.gz"
+            "do8280_RNA_interference.wild_type_genotype.271_siRNA.batch_1",
+            "do8288_RNA_interference.wild_type_genotype.271_siRNA.batch_1",
+            "do8308_RNA_interference.wild_type_genotype.271_siRNA.batch_1",
+            "do8316_RNA_interference.wild_type_genotype.271_siRNA.batch_1"
         ), Ambion=c(
-            "do8271_RNA_interference.wild_type_genotype.Ambion_control.batch_1.bedgraph.gz",
-            "do8303_RNA_interference.wild_type_genotype.Ambion_control.batch_1.bedgraph.gz",
-            "do8307_RNA_interference.wild_type_genotype.Ambion_control.batch_1.bedgraph.gz",
-            "do8310_RNA_interference.wild_type_genotype.Ambion_control.batch_1.bedgraph.gz"
+            "do8271_RNA_interference.wild_type_genotype.Ambion_control.batch_1",
+            "do8303_RNA_interference.wild_type_genotype.Ambion_control.batch_1",
+            "do8307_RNA_interference.wild_type_genotype.Ambion_control.batch_1",
+            "do8310_RNA_interference.wild_type_genotype.Ambion_control.batch_1"
         ), Dharmacon=c(
-            "do8289_RNA_interference.wild_type_genotype.Dharmacon_control.batch_1.bedgraph.gz",
-            "do8292_RNA_interference.wild_type_genotype.Dharmacon_control.batch_1.bedgraph.gz",
-            "do8297_RNA_interference.wild_type_genotype.Dharmacon_control.batch_1.bedgraph.gz"
+            "do8289_RNA_interference.wild_type_genotype.Dharmacon_control.batch_1",
+            "do8292_RNA_interference.wild_type_genotype.Dharmacon_control.batch_1",
+            "do8297_RNA_interference.wild_type_genotype.Dharmacon_control.batch_1"
         )
     ), LNA=list(`271`=c(
-            "do12583_LNA.wild_type_genotype.271_LNA.batch_3.bedgraph.gz",
-            "do12594_LNA.wild_type_genotype.271_LNA.batch_3.bedgraph.gz",
-            "do12646_LNA.wild_type_genotype.271_LNA.batch_3.bedgraph.gz",
-            "do12652_LNA.wild_type_genotype.271_LNA.batch_3.bedgraph.gz"
+            "do12583_LNA.wild_type_genotype.271_LNA.batch_3",
+            "do12594_LNA.wild_type_genotype.271_LNA.batch_3",
+            "do12646_LNA.wild_type_genotype.271_LNA.batch_3",
+            "do12652_LNA.wild_type_genotype.271_LNA.batch_3"
         ), `Negative A`=c(
-            "do12587_LNA.wild_type_genotype.Negative_control_A.batch_3.bedgraph.gz",
-            "do12615_LNA.wild_type_genotype.Negative_control_A.batch_3.bedgraph.gz",
-            "do12632_LNA.wild_type_genotype.Negative_control_A.batch_3.bedgraph.gz",
-            "do12643_LNA.wild_type_genotype.Negative_control_A.batch_3.bedgraph.gz"
+            "do12587_LNA.wild_type_genotype.Negative_control_A.batch_3",
+            "do12615_LNA.wild_type_genotype.Negative_control_A.batch_3",
+            "do12632_LNA.wild_type_genotype.Negative_control_A.batch_3",
+            "do12643_LNA.wild_type_genotype.Negative_control_A.batch_3"
         ), `Negative B`=c(
-            "do12575_LNA.wild_type_genotype.Negative_control_B.batch_3.bedgraph.gz",
-            "do12609_LNA.wild_type_genotype.Negative_control_B.batch_3.bedgraph.gz",
-            "do12619_LNA.wild_type_genotype.Negative_control_B.batch_3.bedgraph.gz",
-            "do12649_LNA.wild_type_genotype.Negative_control_B.batch_3.bedgraph.gz"
+            "do12575_LNA.wild_type_genotype.Negative_control_B.batch_3",
+            "do12609_LNA.wild_type_genotype.Negative_control_B.batch_3",
+            "do12619_LNA.wild_type_genotype.Negative_control_B.batch_3",
+            "do12649_LNA.wild_type_genotype.Negative_control_B.batch_3"
         )
     )
 )
 
 colors <- list(RNAi=c(`271`="red", Ambion="salmon", Dharmacon="violet"),
     LNA=c(`271`="blue", `Negative A`="dodgerblue", `Negative B`="lightblue"))
+
+all.bound <- list(TPPP=c(RNAi=1, LNA=1),
+    `271`=c(RNAi=1, LNA=1))
 
 # Pre-work.
 library(EnsDb.Hsapiens.v86)
@@ -52,6 +55,7 @@ library(rtracklayer)
 for (loc in names(all.regions)) {
     REQUESTED <- all.regions[[loc]]
     CHR <- as.character(seqnames(REQUESTED))
+    FORWARD <- as.logical(strand(REQUESTED)=="+")
 
     # Setting up the annotation:
     itrack <- IdeogramTrack(genome = "hg38", chromosome = CHR)
@@ -77,21 +81,22 @@ for (loc in names(all.regions)) {
         FILES <- all.files[[comparison]]
         all.tracks <- list()
         mean.tracks <- list()
+        cur.bound <- bound[[loc]][comparison]
 
         for (f in names(FILES)) {
             CUR.FILES <- FILES[[f]]
             cur.tracks <- vector("list", length(CUR.FILES))
-            mean.cov <- 0
             cur.color <- colors[[comparison]][f]
-
-            for (i in seq_along(CUR.FILES)) {              
-                cmd <- sprintf("zcat %s | grep '^%s'", file.path("../../rnaseq/analysis/bedgraph", CUR.FILES[i]), CHR)
+            
+            mean.cov <- 0
+            for (i in seq_along(CUR.FILES)) {
+                fpath <- file.path("../../rnaseq/analysis/bedgraph", paste0(CUR.FILES[i], ifelse(FORWARD, "_F", "_R"), ".bedgraph.gz"))
+                cmd <- sprintf("zcat %s | grep '^%s'", fpath, CHR)
                 X <- import(pipe(cmd), format="bedgraph") # Restricting the input, otherwise memory usage explodes.
                 seqlevels(X) <- CHR
-                X$score <- pmin(X$score, 3)
                 cur.tracks[[i]] <- DataTrack(range = X, genome = "hg38",  
                     type = "histogram", chromosome = CHR, name = paste(f, i),
-                    col.histogram = cur.color, fill.histogram = cur.color)
+                    col.histogram = cur.color, fill.histogram = cur.color, ylim=c(0, cur.bound))
                 mean.cov <- mean.cov + Rle(values=X$score, lengths=width(X))
             }
 
@@ -102,16 +107,16 @@ for (loc in names(all.regions)) {
             mean.range$score <- runValue(mean.cov)
             mean.tracks[[f]] <- DataTrack(range = mean.range, genome = "hg38",
                 type = "histogram", chromosome = CHR, name = f,
-                col.histogram = cur.color, fill.histogram = cur.color)
+                col.histogram = cur.color, fill.histogram = cur.color, ylim=c(0, cur.bound))
         }
 
         # Making the plot.
-        pdf(paste0(comparison, "_", gsub("\\s", "-", f), "_all.pdf"), height=12, width=8)
+        pdf(paste0(loc, "_", comparison, "_all.pdf"), height=12, width=8)
         plotTracks(c(list(itrack, gtrack), unlist(all.tracks), list(grtrack)), from=start(REQUESTED), to=end(REQUESTED), 
                 transcriptAnnotation = "symbol")
         dev.off()
 
-        pdf(paste0(comparison, "_", gsub("\\s", "-", f), "_mean.pdf"), height=12, width=8)
+        pdf(paste0(loc, "_", comparison, "_mean.pdf"), height=12, width=8)
         plotTracks(c(list(itrack, gtrack), mean.tracks, list(grtrack)), from=start(REQUESTED), to=end(REQUESTED), 
                 transcriptAnnotation = "symbol")
         dev.off()
