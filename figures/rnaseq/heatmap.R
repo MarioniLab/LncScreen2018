@@ -1,8 +1,9 @@
 # Creating the heatmap of DE genes for 271.
 
 library(edgeR)
-y <- readRDS("../rnaseq/analysis/object.rds")
-sig <- read.table("../rnaseq/analysis/results_lfc/cons_271_all.txt", header=TRUE, sep="\t", row.names=1)
+home.dir <- "../../rnaseq/analysis"
+y <- readRDS(file.path(home.dir, "object.rds"))
+sig <- read.table(file.path(home.dir, "results_lfc/cons_271_all.txt"), header=TRUE, sep="\t", row.names=1)
 sig <- sig[sig$adj.P.Val <= 0.05,]
 
 to.use <- c(
@@ -16,8 +17,10 @@ to.use <- c(
 
 # Using all significant genes, plus the LINC itself.
 y <- y[c(rownames(sig), "ENSG00000231711"), y$samples$group %in% to.use]
-adjc <- cpm(y, log=TRUE, prior.count=3)
+to.order <- c(rownames(sig)[order(sig$RNAi_Ambion.logFC)], "ENSG00000231711")
+y <- y[to.order,]
 
+adjc <- cpm(y, log=TRUE, prior.count=3)
 colnames(adjc) <- y$samples$group
 adjc <- adjc[,order(match(colnames(adjc), to.use))]
 rownames(adjc) <- y$genes$Symbol
@@ -33,6 +36,10 @@ adjc[,in.rnai] <- adjc[,in.rnai] - rowMeans(adjc[,colnames(adjc) %in% to.use[5:6
 LIM <- 2
 adjc[adjc > LIM] <- LIM
 adjc[adjc < -LIM] <- -LIM
+
+# Ordering rows by LFC.
+gap <- nrow(sig)
+
 pdf("heat_271_rna.pdf")
-pheatmap(adjc, cluster_cols=FALSE, breaks=seq(-LIM, LIM, length.out=101))
+pheatmap(adjc, cluster_cols=FALSE, cluster_rows=FALSE, breaks=seq(-LIM, LIM, length.out=101), gaps_row=gap)
 dev.off()
