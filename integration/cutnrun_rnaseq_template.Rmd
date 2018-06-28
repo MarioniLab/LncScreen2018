@@ -35,6 +35,14 @@ cnr.lna <- read.delim(file.path(cnr.path, "LNA_#_MARK_#_genes.tsv"),
     row.names=1, stringsAsFactors=FALSE)
 ```
 
+Also obtaining the `DGEList` object for more detailed testing.
+
+```{r}
+library(edgeR)
+y <- readRDS("../rnaseq/analysis/object.rds")
+design <- y$design
+```
+
 # Intersecting for RNAi
 
 Only keeping genes that were detected in both.
@@ -70,12 +78,35 @@ DataFrame(Both=sum(output$PValue <= threshold),
     CNR=sum(output$CNR.PValue <= threshold))
 ```
 
-Also looking at the direction of change for the genes that are significant in both technologies:
+Looking at the direction of change for the genes that are significant in both technologies:
 
 ```{r}
 keep <- output$PValue <= threshold
 table(output$RNA.RNAi_Ambion.logFC[keep] > 0,
     output$CNR.direction[keep])
+```
+
+Throwing in a few ROAST tests based on the direction of the change.
+
+```{r}
+indices <- list(
+    Up=rownames(cnr.rnai)[cnr.rnai$FDR <= 0.05 & cnr.rnai$direction=="up"],
+    Down=rownames(cnr.rnai)[cnr.rnai$FDR <= 0.05 & cnr.rnai$direction=="down"]
+)
+
+# Versus Ambion 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_1,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+
+# Versus Dharmacon
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_1,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
 ```
 
 # Intersecting for LNA
@@ -119,6 +150,29 @@ Also looking at the direction of change for the genes that are significant in bo
 keep <- output$PValue <= threshold
 table(output$RNA.LNA_NegA[keep] > 0,
     output$CNR.direction[keep])
+```
+
+Throwing in a few ROAST tests based on the direction of the change.
+
+```{r}
+indices <- list(
+    Up=rownames(cnr.lna)[cnr.lna$FDR <= 0.05 & cnr.lna$direction=="up"],
+    Down=rownames(cnr.lna)[cnr.lna$FDR <= 0.05 & cnr.lna$direction=="down"]
+)
+
+# Versus control A
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_A.batch_3,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+
+# Versus control B
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_B.batch_3,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
 ```
 
 # Wrapping up
