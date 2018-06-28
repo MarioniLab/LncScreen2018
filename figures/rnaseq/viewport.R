@@ -36,8 +36,8 @@ all.files <- list(RNAi=list(`271`=c(
     )
 )
 
-colors <- list(RNAi=c(`271`="red", Ambion="salmon", Dharmacon="violet"),
-    LNA=c(`271`="blue", `Negative A`="dodgerblue", `Negative B`="lightblue"))
+colors <- list(RNAi=c(`271`="lightblue", Ambion="lightgrey", Dharmacon="lightgrey"),
+    LNA=c(`271`="lightblue", `Negative A`="lightgrey", `Negative B`="lightgrey"))
 
 bounds <- list(TPPP=c(RNAi=1, LNA=1),
     `271`=c(RNAi=1, LNA=1))
@@ -90,7 +90,7 @@ for (loc in names(all.regions)) {
             
             mean.cov <- 0
             for (i in seq_along(CUR.FILES)) {
-                fpath <- file.path("../../rnaseq/analysis/bedgraph", paste0(CUR.FILES[i], ifelse(FORWARD, "_R", "_F"), ".bedgraph.gz"))
+                fpath <- file.path("../../rnaseq/analysis/bedgraph", paste0(CUR.FILES[i], ifelse(FORWARD, "_F", "_R"), ".bedgraph.gz"))
                 cmd <- sprintf("zcat %s | grep '^%s'", fpath, CHR)
                 X <- import(pipe(cmd), format="bedgraph") # Restricting the input, otherwise memory usage explodes.
                 seqlevels(X) <- CHR
