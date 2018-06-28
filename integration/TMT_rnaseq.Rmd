@@ -18,13 +18,21 @@ This intersects the differential expression results from TMT (proteomics) and RN
 First we define the paths to the DE result tables.
 
 ```{r}
-rnaseq.path <- "../rnaseq/analysis/results_de/"
+rnaseq.path <- "../rnaseq/analysis/results_lfc/"
 rna.path.C1 <- file.path(rnaseq.path, "cons_C1_RNAi.txt")
 rna.path.271 <- file.path(rnaseq.path, "cons_271_RNAi.txt")
 
 tmt.path <- "../proteomics/TMT"
 tmt.path.C1 <- file.path(tmt.path, "LS.C1.SiRNA.lncRNA_vs_LS.Con.SiRNA.txt")
 tmt.path.271 <- file.path(tmt.path, "LS.271.SiRNA.lncRNA_vs_LS.Con.SiRNA.txt")
+```
+
+We load in the `DGEList` for further testing.
+
+```{r}
+library(edgeR)
+y <- readRDS("../rnaseq/analysis/object.rds")
+design <- y$design
 ```
 
 We also set up a function to convert Uniprot IDs to Ensembl.
@@ -84,6 +92,38 @@ DataFrame(Both=sum(output$adj.P.Val <= threshold),
     TMT=sum(output$TMT.P.Value <= threshold))
 ```
 
+Looking at the direction of change for the genes that are significant in both technologies:
+
+```{r}
+keep <- output$P.Value <= threshold
+table(RNA=output$RNA.RNAi_Ambion.logFC[keep] > 0,
+    TMT=output$TMT.logFC[keep] > 0)
+```
+
+Throwing in a few ROAST tests based on the direction of the change.
+
+```{r}
+has.ens <- !is.na(tmt.res$ENSEMBL)
+indices <- list(
+    Up=tmt.res$ENSEMBL[has.ens & tmt.res$adj.P.Val <= 0.05 & tmt.res$logFC > 0],
+    Down=tmt.res$ENSEMBL[has.ens & tmt.res$adj.P.Val <= 0.05 & tmt.res$logFC < 0]
+)
+
+# Versus Ambion 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_1,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+
+# Versus Dharmacon
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_1,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+```
+
 # Intersecting for C1
 
 We have a look at the intersection of results for the C1 and TMT DE lists.
@@ -124,6 +164,38 @@ threshold <- max(output$P.Value[output$adj.P.Val <= 0.05])
 DataFrame(Both=sum(output$adj.P.Val <= threshold),
     RNA=sum(output$RNA.P.Value <= threshold),
     TMT=sum(output$TMT.P.Value <= threshold))
+```
+
+Looking at the direction of change for the genes that are significant in both technologies:
+
+```{r}
+keep <- output$P.Value <= threshold
+table(RNA=output$RNA.RNAi_Ambion.logFC[keep] > 0,
+    TMT=output$TMT.logFC[keep] > 0)
+```
+
+Throwing in a few ROAST tests based on the direction of the change.
+
+```{r}
+has.ens <- !is.na(tmt.res$ENSEMBL)
+indices <- list(
+    Up=tmt.res$ENSEMBL[has.ens & tmt.res$adj.P.Val <= 0.05 & tmt.res$logFC > 0],
+    Down=tmt.res$ENSEMBL[has.ens & tmt.res$adj.P.Val <= 0.05 & tmt.res$logFC < 0]
+)
+
+# Versus Ambion 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_2,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+
+# Versus Dharmacon
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.C1_siRNA.batch_2
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_2,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
 ```
 
 # Wrapping up
