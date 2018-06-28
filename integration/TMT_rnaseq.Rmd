@@ -1,0 +1,135 @@
+---
+title: Comparing RNA-seq and TMT results
+author: Aaron Lun
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc_float: yes
+    fig_caption: false
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
+```
+
+# Overview
+
+This intersects the differential expression results from TMT (proteomics) and RNA-seq for C1 and 271 knockdown with RNAi.
+First we define the paths to the DE result tables.
+
+```{r}
+rnaseq.path <- "../rnaseq/analysis/results_de/"
+rna.path.C1 <- file.path(rnaseq.path, "cons_C1_RNAi.txt")
+rna.path.271 <- file.path(rnaseq.path, "cons_271_RNAi.txt")
+
+tmt.path <- "../proteomics/TMT"
+tmt.path.C1 <- file.path(tmt.path, "LS.C1.SiRNA.lncRNA_vs_LS.Con.SiRNA.txt")
+tmt.path.271 <- file.path(tmt.path, "LS.271.SiRNA.lncRNA_vs_LS.Con.SiRNA.txt")
+```
+
+We also set up a function to convert Uniprot IDs to Ensembl.
+
+```{r}
+library(org.Hs.eg.db)
+CONVERTER <- function(x) {
+    mapIds(org.Hs.eg.db, keytype="UNIPROT", keys=x, column='ENSEMBL')
+}
+```
+
+... as well as a directory to dump the results into.
+
+```{r}
+dir.create("results", showWarnings=FALSE)
+```
+
+# Intersecting for 271
+
+We have a look at the intersection of results for the 271 and TMT DE lists.
+
+```{r}
+rna.res <- read.table(rna.path.271, header=TRUE, sep="\t", stringsAsFactors=FALSE, row.names=1)
+tmt.res <- read.table(tmt.path.271, header=TRUE, sep="\t", stringsAsFactors=FALSE, quote="", comment.char="")
+tmt.res$ENSEMBL <- CONVERTER(tmt.res$Protein)
+universe <- intersect(rownames(rna.res), tmt.res$ENSEMBL)    
+length(universe)
+```
+
+We assemble a table of results for the intersection.
+
+```{r}
+sub.rna <- rna.res[universe,]
+sub.tmt <- tmt.res[match(universe, tmt.res$ENSEMBL),]
+output <- data.frame(row.names=universe, Symbol=sub.rna$Symbol,
+     RNA.AveExpr=sub.rna$AveExpr, 
+     RNA.RNAi_Ambion.logFC=sub.rna$RNAi_Ambion.logFC,
+     RNA.RNAi_Dharmacon.logFC=sub.rna$RNAi_Dharmacon.logFC,
+     RNA.P.Value=sub.rna$P.Value,
+     TMT.AveExpr=sub.tmt$AveExpr, 
+     TMT.logFC=sub.tmt$logFC,
+     TMT.P.Value=sub.tmt$P.Value,
+     P.Value=pmax(sub.rna$P.Value, sub.tmt$P.Value))
+output$adj.P.Val <- p.adjust(output$P.Value, method="BH")
+output <- output[order(output$P.Value),]
+write.table(output, file=file.path("results", "TMT_rnaseq_271.txt"),
+    sep="\t", quote=FALSE, col.names=NA)
+head(output)
+```
+
+We also compute some numbers based on the significance threshold in the intersection.
+
+```{r}
+threshold <- max(output$P.Value[output$adj.P.Val <= 0.05])
+DataFrame(Both=sum(output$adj.P.Val <= threshold),
+    RNA=sum(output$RNA.P.Value <= threshold),
+    TMT=sum(output$TMT.P.Value <= threshold))
+```
+
+# Intersecting for C1
+
+We have a look at the intersection of results for the C1 and TMT DE lists.
+
+```{r}
+rna.res <- read.table(rna.path.C1, header=TRUE, sep="\t", stringsAsFactors=FALSE, row.names=1)
+tmt.res <- read.table(tmt.path.C1, header=TRUE, sep="\t", stringsAsFactors=FALSE, quote="", comment.char="")
+tmt.res$ENSEMBL <- CONVERTER(tmt.res$Protein)
+universe <- intersect(rownames(rna.res), tmt.res$ENSEMBL)    
+length(universe)
+```
+
+We assemble a table of results for the intersection.
+
+```{r}
+sub.rna <- rna.res[universe,]
+sub.tmt <- tmt.res[match(universe, tmt.res$ENSEMBL),]
+output <- data.frame(row.names=universe, Symbol=sub.rna$Symbol,
+     RNA.AveExpr=sub.rna$AveExpr, 
+     RNA.RNAi_Ambion.logFC=sub.rna$RNAi_Ambion.logFC,
+     RNA.RNAi_Dharmacon.logFC=sub.rna$RNAi_Dharmacon.logFC,
+     RNA.P.Value=sub.rna$P.Value,
+     TMT.AveExpr=sub.tmt$AveExpr, 
+     TMT.logFC=sub.tmt$logFC,
+     TMT.P.Value=sub.tmt$P.Value,
+     P.Value=pmax(sub.rna$P.Value, sub.tmt$P.Value))
+output$adj.P.Val <- p.adjust(output$P.Value, method="BH")
+output <- output[order(output$P.Value),]
+write.table(output, file=file.path("results", "TMT_rnaseq_C1.txt"),
+    sep="\t", quote=FALSE, col.names=NA)
+head(output)
+```
+
+We also compute some numbers based on the significance threshold in the intersection.
+
+```{r}
+threshold <- max(output$P.Value[output$adj.P.Val <= 0.05])
+DataFrame(Both=sum(output$adj.P.Val <= threshold),
+    RNA=sum(output$RNA.P.Value <= threshold),
+    TMT=sum(output$TMT.P.Value <= threshold))
+```
+
+# Wrapping up
+
+```{r}
+sessionInfo()
+```
+
+
