@@ -1,2 +1,8 @@
 *.html
 results/
+cutnrun_rnaseq_H3K27ac.Rmd
+cutnrun_rnaseq_H3K27me3.Rmd
+cutnrun_rnaseq_H3K36me3.Rmd
+cutnrun_rnaseq_H3K4me3.Rmd
+cutnrun_rnaseq_antiRabbit.Rmd
+

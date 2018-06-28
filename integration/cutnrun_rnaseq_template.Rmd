@@ -1,0 +1,128 @@
+---
+title: Comparing RNA-seq and #_MARK_# cut-and-run results
+author: Aaron Lun
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc_float: yes
+    fig_caption: false
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
+```
+
+# Reading in the data
+
+This intersects the differential expression results from RNA-seq with the #_MARK_# differential binding results.
+First we read in the DE result tables.
+
+```{r}
+rna.path <- "../rnaseq/analysis/results_de"
+rna.rnai <- read.delim(file.path(rna.path, "cons_271_RNAi.txt"), 
+    row.names=1, stringsAsFactors=FALSE)
+rna.lna <- read.delim(file.path(rna.path, "cons_271_LNA.txt"), 
+    row.names=1, stringsAsFactors=FALSE)
+```
+
+... and to the cut-and-run differential binding tables for each gene:
+
+```{r}
+cnr.path <- "../cutnrun/analysis/#_MARK_#/"
+cnr.rnai <- read.delim(file.path(cnr.path, "RNAi_#_MARK_#_genes.tsv"), 
+    row.names=1, stringsAsFactors=FALSE)
+cnr.lna <- read.delim(file.path(cnr.path, "LNA_#_MARK_#_genes.tsv"),
+    row.names=1, stringsAsFactors=FALSE)
+```
+
+# Intersecting for RNAi
+
+Only keeping genes that were detected in both.
+
+```{r}
+present <- intersect(rownames(rna.rnai), rownames(cnr.rnai))
+rna.rnai <- rna.rnai[present,]    
+cnr.rnai <- cnr.rnai[present,]    
+length(present)
+```
+
+Defining intersection-union test p-values.
+
+```{r}
+output <- cbind(Symbol=rna.rnai$Symbol, 
+    RNA=rna.rnai[,-c(1,5,6,8)], 
+    CNR=cnr.rnai[,-c(1,6)])
+output$PValue <- pmax(rna.rnai$P.Value, cnr.rnai$PValue)
+output$FDR <- p.adjust(output$PValue, method="BH")
+output <- output[order(output$PValue),]
+write.table(file="results/RNAi_#_MARK_#_271.txt", output,
+    sep="\t", quote=FALSE, col.names=NA)        
+head(output)
+```
+
+Figuring out the number of genes that change in any direction, in either or both technologies:
+
+```{r}
+library(S4Vectors)
+threshold <- max(output$PValue[output$FDR <= 0.05])
+DataFrame(Both=sum(output$PValue <= threshold),
+    RNA=sum(output$RNA.P.Value <= threshold),
+    CNR=sum(output$CNR.PValue <= threshold))
+```
+
+Also looking at the direction of change for the genes that are significant in both technologies:
+
+```{r}
+keep <- output$PValue <= threshold
+table(output$RNA.RNAi_Ambion.logFC[keep] > 0,
+    output$CNR.direction[keep])
+```
+
+# Intersecting for LNA
+
+Repeating this process for LNA.
+First, only keeping genes that were detected in both.
+
+```{r}
+present <- intersect(rownames(rna.lna), rownames(cnr.lna))
+rna.lna <- rna.lna[present,]    
+cnr.lna <- cnr.lna[present,]    
+length(present)
+```
+
+Defining intersection-union test p-values.
+
+```{r}
+output <- cbind(Symbol=rna.lna$Symbol, 
+    RNA=rna.lna[,-c(1,5,6,8)], 
+    CNR=cnr.lna[,-c(1,6)])
+output$PValue <- pmax(rna.lna$P.Value, cnr.lna$PValue)
+output$FDR <- p.adjust(output$PValue, method="BH")
+output <- output[order(output$PValue),]
+write.table(file="results/LNA_#_MARK_#_271.txt", output,
+    sep="\t", quote=FALSE, col.names=NA)        
+head(output)
+```
+
+Figuring out the number of genes that change in any direction, in either or both technologies:
+
+```{r}
+threshold <- max(output$PValue[output$FDR <= 0.05])
+DataFrame(Both=sum(output$PValue <= threshold),
+    RNA=sum(output$RNA.P.Value <= threshold),
+    CNR=sum(output$CNR.PValue <= threshold))
+```
+
+Also looking at the direction of change for the genes that are significant in both technologies:
+
+```{r}
+keep <- output$PValue <= threshold
+table(output$RNA.LNA_NegA[keep] > 0,
+    output$CNR.direction[keep])
+```
+
+# Wrapping up
+
+```{r}
+sessionInfo()
+```    
