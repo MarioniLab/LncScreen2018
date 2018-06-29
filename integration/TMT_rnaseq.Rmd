@@ -87,7 +87,7 @@ We also compute some numbers based on the significance threshold in the intersec
 
 ```{r}
 threshold <- max(output$P.Value[output$adj.P.Val <= 0.05])
-DataFrame(Both=sum(output$adj.P.Val <= threshold),
+DataFrame(Both=sum(output$P.Value <= threshold),
     RNA=sum(output$RNA.P.Value <= threshold),
     TMT=sum(output$TMT.P.Value <= threshold))
 ```
@@ -161,7 +161,7 @@ We also compute some numbers based on the significance threshold in the intersec
 
 ```{r}
 threshold <- max(output$P.Value[output$adj.P.Val <= 0.05])
-DataFrame(Both=sum(output$adj.P.Val <= threshold),
+DataFrame(Both=sum(output$P.Value <= threshold),
     RNA=sum(output$RNA.P.Value <= threshold),
     TMT=sum(output$TMT.P.Value <= threshold))
 ```
