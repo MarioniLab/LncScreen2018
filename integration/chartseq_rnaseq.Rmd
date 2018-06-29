@@ -1,0 +1,98 @@
+---
+title: Comparing RNA-seq and CHART-seq results
+author: Aaron Lun
+date: "`r Sys.Date()`"
+output:
+  BiocStyle::html_document:
+    toc_float: yes
+    fig_caption: false
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(error=FALSE, warning=FALSE, message=FALSE)
+```
+
+# Reading in the data
+
+This intersects the differential expression results from RNA-seq with the #_MARK_# differential binding results.
+First we read in the DE result tables.
+
+```{r}
+rna.path <- "../rnaseq/analysis/results_lfc"
+rna.rnai <- read.delim(file.path(rna.path, "cons_271_RNAi.txt"), 
+    row.names=1, stringsAsFactors=FALSE)
+rna.lna <- read.delim(file.path(rna.path, "cons_271_LNA.txt"), 
+    row.names=1, stringsAsFactors=FALSE)
+rna.res <- read.delim(file.path(rna.path, "cons_271_all.txt"), 
+    row.names=1, stringsAsFactors=FALSE)
+```
+
+... and to the cut-and-run differential binding tables for each gene:
+
+```{r}
+chart.path <- "../chartseq/analysis/db_genes.tsv"
+chart.res <- read.delim(chart.path, row.names=1, stringsAsFactors=FALSE)
+```
+
+Also obtaining the `DGEList` object for more detailed testing.
+
+```{r}
+library(edgeR)
+y <- readRDS("../rnaseq/analysis/object.rds")
+design <- y$design
+```
+
+# Intersecting all results
+
+Figuring out the intersection.
+Note that we can't use intersection-union tests due to the use of the empirical FDR, so we'll just do it in a more _ad hoc_ manner.
+
+```{r}
+sig.chart <- rownames(chart.res)[chart.res$FDR <= 0.3]
+sig.rna <- rownames(rna.res)[rna.res$adj.P.Val <= 0.05] 
+length(intersect(sig.rna, sig.chart)) # In RNA+LNA and CHART 
+length(setdiff(sig.rna, sig.chart)) # In RNA+LNA, but not CHART 
+length(setdiff(sig.chart, sig.rna)) # In CHART but not RNA+LNA
+```
+
+# Gene set testing on CHART-bound sites
+
+Throwing in a few ROAST tests based on the direction of the change.
+
+```{r}
+indices <- list(Bound=sig.chart)
+
+# Versus Ambion 
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Ambion_control.batch_1,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+
+# Versus Dharmacon
+con <- makeContrasts(
+    gRNA_interference.wild_type_genotype.271_siRNA.batch_1
+        - gRNA_interference.wild_type_genotype.Dharmacon_control.batch_1,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+
+# Versus control A
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_A.batch_3,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+
+# Versus control B
+con <- makeContrasts(
+    gLNA.wild_type_genotype.271_LNA.batch_3
+        - gLNA.wild_type_genotype.Negative_control_B.batch_3,
+    levels=design)
+roast(y, indices, design=design, contrast=con)
+```
+
+# Wrapping up
+
+```{r}
+sessionInfo()
+```    
