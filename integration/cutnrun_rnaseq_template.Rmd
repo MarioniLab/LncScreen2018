@@ -18,7 +18,7 @@ This intersects the differential expression results from RNA-seq with the #_MARK
 First we read in the DE result tables.
 
 ```{r}
-rna.path <- "../rnaseq/analysis/results_de"
+rna.path <- "../rnaseq/analysis/results_lfc"
 rna.rnai <- read.delim(file.path(rna.path, "cons_271_RNAi.txt"), 
     row.names=1, stringsAsFactors=FALSE)
 rna.lna <- read.delim(file.path(rna.path, "cons_271_LNA.txt"), 
@@ -45,7 +45,7 @@ design <- y$design
 
 # Intersecting for RNAi
 
-Only keeping genes that were detected in both.
+Only keeping genes that were detected in both - obviously it is impossible to relate DB to DE upon knockdown, when there is no binding at all.
 
 ```{r}
 present <- intersect(rownames(rna.rnai), rownames(cnr.rnai))
