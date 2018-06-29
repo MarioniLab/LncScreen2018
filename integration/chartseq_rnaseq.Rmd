@@ -45,15 +45,29 @@ design <- y$design
 # Intersecting all results
 
 Figuring out the intersection.
+We don't restrict the universe here, as genes that don't exhibit a different in the CHART-seq (against control) are clearly not bound at all.
 Note that we can't use intersection-union tests due to the use of the empirical FDR, so we'll just do it in a more _ad hoc_ manner.
 
 ```{r}
 sig.chart <- rownames(chart.res)[chart.res$FDR <= 0.3]
+
 sig.rna <- rownames(rna.res)[rna.res$adj.P.Val <= 0.05] 
-length(intersect(sig.rna, sig.chart)) # In RNA+LNA and CHART 
-length(setdiff(sig.rna, sig.chart)) # In RNA+LNA, but not CHART 
-length(setdiff(sig.chart, sig.rna)) # In CHART but not RNA+LNA
+threshold <- max(rna.res[sig.rna,"P.Value"])
+sig.rnai <- rownames(rna.rnai)[rna.rnai$P.Value <= threshold] 
+sig.lna <- rownames(rna.lna)[rna.lna$P.Value <= threshold] 
+
+intersect(sig.rna, sig.chart) # In RNAi+LNA and CHART 
+length(setdiff(sig.chart, sig.rna)) # In CHART but not RNAi+LNA
+length(setdiff(sig.rna, sig.chart)) # In RNAi+LNA but not CHART
+
+length(setdiff(intersect(sig.rnai, sig.chart), sig.rna)) # In RNAi and CHART, but not LNA
+length(setdiff(intersect(sig.lna, sig.chart), sig.rna)) # In LNA and CHART, but not RNAi
+
+length(setdiff(sig.rnai, c(sig.chart, sig.lna)) # In RNA and CHART, but not LNA.
+length(setdiff(sig.lna, c(sig.chart, sig.rnai))) # In LNA and CHART, but not RNAi
+
 ```
+
 
 # Gene set testing on CHART-bound sites
 
