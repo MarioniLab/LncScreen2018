@@ -1,5 +1,4 @@
 all.out <- list()
-all.out[["Comment[ArrayExpressAccession]"]] <- "E-MTAB-5308"
 all.out[["MAGE-TAB Version"]] <- "1.1"
 all.out[["Investigation Title"]] <- "Quantifying the transcriptional effects of lncRNA depletion in HeLa cells with RNA-seq"
 all.out[["Comment[Submitted Name]"]] <- "Quantifying the transcriptional effects of lncRNA depletion in HeLa cells with RNA-seq"
@@ -93,11 +92,8 @@ all.out[["Protocol Software"]] <- c("",
 all.out[["Term Source Name"]] <- "EFO"
 all.out[["Term Source File"]] <- "http://www.ebi.ac.uk/efo/"
 all.out[["Term Source Version"]] <- ""
-all.out[["Public Release Date"]] <- "2017-05-31"
+all.out[["Public Release Date"]] <- "2019-03-01"
 all.out[["Comment[AEExperimentType]"]] <- "RNA-seq of coding RNA"
-all.out[["Comment[SequenceDataURI]"]] <- "http://www.ebi.ac.uk/ena/data/view/ERR1751045-ERR1751697"
-all.out[["Comment[SecondaryAccession]"]] <- "ERP020478"
-all.out[["SDRF File"]] <- "E-MTAB-5308.sdrf.txt"
 
 unlink("idf.tsv")
 for (x in names(all.out)) {
