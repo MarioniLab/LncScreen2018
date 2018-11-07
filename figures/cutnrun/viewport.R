@@ -5,11 +5,11 @@ all.regions <- list(TPPP=GRanges("chr5", IRanges(659862,695000)),
 
 # This file selection choice is _extremely_ fragile, and depends on the ordering of bedgraph file names.
 # Fortunately, in this case, the ordering is consistent across experiments with different marks.
-all.choices <- list(`RNAi 271`=c(1,5), `RNAi control`=c(2,6),
-    `LNA 271`=c(3,7), `LNA control`=c(4, 8))
+all.choices <- list(`RNAi control`=c(1,5), `RNAi 271`=c(2,6), 
+    `LNA control`=c(3, 7), `LNA 271`=c(4, 8)) 
 
-colors <- list(`RNAi 271`="lightblue", `RNAi control`="lightgrey",
-    `LNA 271`="lightblue", `LNA control`="lightgrey")
+colors <- list(`RNAi 271`="#0095FF", `RNAi control`="#666666",
+    `LNA 271`="#0095FF", `LNA control`="#666666")
 
 bounds <- list(
     TPPP=c(H3K4me3=3, H3K27ac=5, H3K27me3=2, H3K36me3=2, antiRabbit=2),
@@ -54,7 +54,7 @@ for (loc in names(all.regions)) {
     # Importing the bedgraph files on the current chromosome.
     for (mark in c("H3K4me3", "H3K36me3", "H3K27ac", "H3K27me3", "antiRabbit")) { 
         bg.files <- list.files(sprintf("../../cutnrun/analysis/%s/bedgraph", mark), full=TRUE, pattern=".bedgraph.gz$")
-        bg.files <- sort(bg.files)
+        bg.files <- sort(bg.files) # Enforce sorting so that 'all.choices' is correct. 
         stopifnot(length(bg.files)==8)
 
         all.tracks <- list()

@@ -17,7 +17,7 @@ bg.files <- list(`271 antisense`=c(
     "SLX-14490.iPCRtagT010.HL73MBBXX.bedgraph.gz"
 ))
 
-colors <- c(`271 antisense`="lightblue", `271 sense`="lightgrey")
+colors <- c(`271 antisense`="#0095FF", `271 sense`="#666666")
 bounds <- c(TPPP=3, TPPP_zoom=3)
 
 # Pre-work.
