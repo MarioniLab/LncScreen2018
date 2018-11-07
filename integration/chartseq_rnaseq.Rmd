@@ -63,11 +63,9 @@ length(setdiff(sig.rna, sig.chart)) # In RNAi+LNA but not CHART
 length(setdiff(intersect(sig.rnai, sig.chart), sig.rna)) # In RNAi and CHART, but not LNA
 length(setdiff(intersect(sig.lna, sig.chart), sig.rna)) # In LNA and CHART, but not RNAi
 
-length(setdiff(sig.rnai, c(sig.chart, sig.lna)) # In RNA and CHART, but not LNA.
+length(setdiff(sig.rnai, c(sig.chart, sig.lna))) # In RNA and CHART, but not LNA.
 length(setdiff(sig.lna, c(sig.chart, sig.rnai))) # In LNA and CHART, but not RNAi
-
 ```
-
 
 # Gene set testing on CHART-bound sites
 
