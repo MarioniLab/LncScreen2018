@@ -31,14 +31,6 @@ all.out[["Person Address"]] <- "University of Cambridge Li Ka Shing Centre Robin
 all.out[["Person Affiliation"]] <- "Cancer Research UK Cambridge Institute"
 all.out[["Person Roles"]] <- "submitter"
 
-all.out[["Protocol Name"]] <- c("P-MTAB-53234", 
-                                "P-MTAB-53235",
-                                "P-MTAB-53236",
-                                "P-MTAB-53237",
-                                "P-MTAB-53238",
-                                "P-MTAB-53239",
-                                "P-MTAB-53240",
-                                "P-MTAB-53241")
 all.out[["Protocol Type"]] <- c("sample collection protocol",
                                 "growth protocol",
                                 "treatment protocol",
@@ -94,6 +86,7 @@ all.out[["Term Source File"]] <- "http://www.ebi.ac.uk/efo/"
 all.out[["Term Source Version"]] <- ""
 all.out[["Public Release Date"]] <- "2019-03-01"
 all.out[["Comment[AEExperimentType]"]] <- "RNA-seq of coding RNA"
+all.out[["Related Accession Number"]] <- "ERP020478"
 
 unlink("idf.tsv")
 for (x in names(all.out)) {

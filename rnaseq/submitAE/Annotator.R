@@ -22,13 +22,6 @@ output[["Characteristics[cell line]"]] <- "HeLa"
 output[["Characteristics[loss of function method]"]] <- final$LOF
 output[["Characteristics[genotype]"]] <- final$Genotype
 output[["Material Type"]] <- "cell"
-output[[paste0(rep(c("Protocol REF", "Performer"), 6), collapse="\t")]] <- paste0(c("P-MTAB-53234", "Lovorka Stojic",
-                                                                                    "P-MTAB-53235", "Lovorka Stojic",
-                                                                                    "P-MTAB-53236", "Lovorka Stojic",
-                                                                                    "P-MTAB-53241", "Lovorka Stojic",
-                                                                                    "P-MTAB-53237", "Lovorka Stojic",
-                                                                                    "P-MTAB-53238","Lovorka Stojic"
-                                                                                    ), collapse="\t")
 output[["Extract Name"]] <- final$Library
 output[["Comment[LIBRARY_LAYOUT]"]] <- "PAIRED"
 output[["Comment[LIBRARY_SELECTION]"]] <- "Inverse rRNA"
