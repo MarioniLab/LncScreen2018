@@ -19,10 +19,6 @@ First we read in the DE result tables.
 
 ```{r}
 rna.path <- "../rnaseq/analysis/results_lfc"
-rna.rnai <- read.delim(file.path(rna.path, "cons_271_RNAi.txt"), 
-    row.names=1, stringsAsFactors=FALSE)
-rna.lna <- read.delim(file.path(rna.path, "cons_271_LNA.txt"), 
-    row.names=1, stringsAsFactors=FALSE)
 rna.res <- read.delim(file.path(rna.path, "cons_271_all.txt"), 
     row.names=1, stringsAsFactors=FALSE)
 ```
@@ -50,22 +46,15 @@ Note that we can't use intersection-union tests due to the use of the empirical 
 
 ```{r}
 sig.chart <- rownames(chart.res)[chart.res$FDR <= 0.3]
-
 sig.rna <- rownames(rna.res)[rna.res$adj.P.Val <= 0.05] 
-threshold <- max(rna.res[sig.rna,"P.Value"])
-sig.rnai <- rownames(rna.rnai)[rna.rnai$P.Value <= threshold] 
-sig.lna <- rownames(rna.lna)[rna.lna$P.Value <= threshold] 
-
 intersect(sig.rna, sig.chart) # In RNAi+LNA and CHART 
-length(setdiff(sig.chart, sig.rna)) # In CHART but not RNAi+LNA
 length(setdiff(sig.rna, sig.chart)) # In RNAi+LNA but not CHART
-
-length(setdiff(intersect(sig.rnai, sig.chart), sig.rna)) # In RNAi and CHART, but not LNA
-length(setdiff(intersect(sig.lna, sig.chart), sig.rna)) # In LNA and CHART, but not RNAi
-
-length(setdiff(sig.rnai, c(sig.chart, sig.lna))) # In RNA and CHART, but not LNA.
-length(setdiff(sig.lna, c(sig.chart, sig.rnai))) # In LNA and CHART, but not RNAi
+length(setdiff(sig.chart, sig.rna)) # In CHART but not RNAi+LNA
 ```
+
+Unfortunately, it is not generally possible to split the Venn into LNA and RNAi-specific sections.
+This is because the Venn has no ability to handle genes that are significant but in different directions between LNA and RNAi.
+As a result, there would always be a minor discrepancy in the sum of the numbers in the intersections compared to the actual total number of DE genes for each technology.
 
 # Gene set testing on CHART-bound sites
 
