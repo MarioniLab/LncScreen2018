@@ -1,7 +1,7 @@
 ---
-title: Semi-quantitative proteomics analysis upon lncRNA knockdown
+title: Semi-quantitative proteomics analysis upon lncRNA pulldown 
 author: Aaron Lun
-date: 2017-03-23
+date: "`r Sys.Date()`"
 output:
   html_document:
     fig_caption: false
