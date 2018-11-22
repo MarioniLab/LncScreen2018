@@ -43,7 +43,7 @@ output[["Derived Array Data File"]] <- "lncRNA_counts.tsv"
 output[["Comment[MD5]"]] <- final$MD5sum
 output[["Factor Value[loss of function method]"]] <- final$LOF
 output[["Factor Value[genotype]"]] <- final$Genotype
-output[["Factor Value[compound]"]] <- sub("271", "LINC000899", final$Compound)
+output[["Factor Value[compound]"]] <- sub("271", "LINC00899", final$Compound)
 
 output$check.names <- FALSE
 sdrf <- do.call(data.frame, output)
