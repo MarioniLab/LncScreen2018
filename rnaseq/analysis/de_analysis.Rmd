@@ -21,7 +21,7 @@ if (!exists(".use.local")) { .use.local <- TRUE }
 
 Loading in the counts, and ignoring the first column of gene lengths.
 
-```{r, eval=.use.local, echo=.use.local}
+```{r}
 all.counts <- read.table("genic_counts.tsv", header=TRUE, row.names=1, sep="\t")
 lengths <- all.counts[,1]
 all.counts <- all.counts[,-1]
@@ -44,6 +44,29 @@ metadata <- read.table("../metadata.tsv", stringsAsFactors=FALSE, header=TRUE, s
 m <- match(colnames(all.counts), metadata$Library)
 stopifnot(all(!is.na(m)))
 metadata <- metadata[m,]
+```
+
+```{r, eval=!.use.local, echo=!.use.local}
+metadata <- read.table("../E-MTAB-7432.sdrf.txt", 
+    stringsAsFactors=FALSE, header=TRUE, sep="\t", check.names=FALSE)
+m <- match(colnames(all.counts), metadata[["Source Name"]])
+stopifnot(all(!is.na(m)))
+metadata <- metadata[m,]
+
+# Adding a number of fields for easier reference.
+condition <- paste(metadata[["Factor Value[loss of function method]"]],
+                   metadata[["Characteristics[genotype]"]],
+                   metadata[["Factor Value[compound]"]],
+                   paste0("batch_", metadata[["Comment[batch number]"]]),
+                   sep=".")
+
+condition <- gsub("[- ]", "_", condition)
+condition <- sub("LINC000899", "271", condition)
+
+metadata$Condition <- condition
+metadata$LOF <- metadata[["Factor Value[loss of function method]"]]
+metadata$Batch <- metadata[["Comment[batch number]"]]
+metadata$Experiment <- metadata[["Comment[experiment number]"]]
 ```
 
 Generating a `DGEList` object.
