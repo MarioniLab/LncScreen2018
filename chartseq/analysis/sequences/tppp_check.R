@@ -37,18 +37,23 @@ writeXStringSet(allseq, file="LINC00899.fa")
 pdf("alignments.pdf")
 for (x in names(ref)) {
     for (y in names(allseq)) {
-        new.refs <- character(100)
+        new.refs <- character(500)
         seq.src <- strsplit(as.character(ref[[x]]), "")[[1]]
         for (i in seq_along(new.refs)) {
             new.refs[i] <- paste(seq.src[sample(length(seq.src))], collapse="")
         }
         aln.g.f <- pairwiseAlignment(DNAStringSet(new.refs), subject=allseq[y], type="local", scoreOnly=TRUE)
         aln.g.r <- pairwiseAlignment(reverseComplement(DNAStringSet(new.refs)), subject=allseq[y], type="local", scoreOnly=TRUE)
-        hist(pmax(aln.g.f, aln.g.r), xlab="Score", col="grey80", breaks=20, main=paste(x, "on", y))
+        simulated <- pmax(aln.g.f, aln.g.r)
+        hist(simulated, xlab="Score", col="grey80", breaks=20, main=paste(x, "on", y))
 
         aln.f <- pairwiseAlignment(ref[x], subject=allseq[y], type="local", scoreOnly=TRUE)
         aln.r <- pairwiseAlignment(reverseComplement(ref[x]), subject=allseq[y], type="local", scoreOnly=TRUE)
-        abline(v=pmax(aln.f, aln.r), col="red", lwd=2, lty=2)
+        actual <- pmax(aln.f, aln.r)
+        abline(v=actual, col="red", lwd=2, lty=2)
+
+        p <- pmin(1, mean(simulated >= actual) * length(allseq) * length(ref))
+        legend("topright", sprintf("p = %.3f", p), box.lwd=0)
     }
 }
 dev.off()
