@@ -14,6 +14,8 @@ libsize <- colSums(assay(se, withDimnames=FALSE))
 library(edgeR)
 library(survival)    
 
+collected.diff <- collected.surv <- list() 
+
 for (cancer in unique(se$cgc_file_disease_type)) {
     typekeep <- which(se$cgc_file_disease_type==cancer)
     disease <- (se$gdc_cases.samples.sample_type=="Primary Tumor")[typekeep]
@@ -30,9 +32,9 @@ for (cancer in unique(se$cgc_file_disease_type)) {
         pdf(paste0(gsub(" ", "_", cancer), "-", gene, ".pdf"))
         all.exprs <- list(Normal=current.expr[normal], Disease=current.expr[disease])
         boxplot(all.exprs, ylab=ylab, main=cancer)
-        if (all(lengths(all.exprs) > 2L)) {
+        if (all(lengths(all.exprs) >= 2L)) {
             tested <- t.test(all.exprs[[1]], all.exprs[[2]])
-            legend("topright", bty="n", legend=sprintf("p = %.3g", tested$p.value))
+            collected.diff <- c(collected.diff, list(data.frame(Cancer=cancer, Gene=gene, P=tested$p.value)))
         }
 
         disease.expr <- current.expr[disease]
@@ -70,8 +72,20 @@ for (cancer in unique(se$cgc_file_disease_type)) {
             cx_fit0 <- coxph(Surv(d2d, status=="dead") ~ age)
         }
         tested <- anova(cx_fit, cx_fit0)
-        legend("topright", bty="n", legend=sprintf("p = %.3g", tested[["P(>|Chi|)"]][2]))
+        collected.surv <- c(collected.surv, list(data.frame(Cancer=cancer, Gene=gene, P=tested[["P(>|Chi|)"]][2])))
         dev.off()
     }
 }
 
+##########################################
+# Examining the statistics.
+
+tab.diff <- do.call(rbind, collected.diff)
+tab.diff$adj.P.Val <- p.adjust(tab.diff$P, method="holm")
+tab.diff <- tab.diff[order(tab.diff$P),]
+write.table(tab.diff, file="tcga_diff.tsv", col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
+
+tab.surv <- do.call(rbind, collected.surv)
+tab.surv$adj.P.Val <- p.adjust(tab.surv$P, method="holm")
+tab.surv <- tab.surv[order(tab.surv$P),]
+write.table(tab.surv, file="tcga_surv.tsv", col.names=TRUE, row.names=FALSE, sep="\t", quote=FALSE)
