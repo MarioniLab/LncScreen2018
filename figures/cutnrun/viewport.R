@@ -14,7 +14,7 @@ colors <- list(`RNAi 271`="#0095FF", `RNAi control`="#666666",
 bounds <- list(
     TPPP=c(H3K4me3=3, H3K27ac=5, H3K27me3=2, H3K36me3=2, antiRabbit=2),
     TPPP_zoom=c(H3K4me3=3, H3K27ac=5, H3K27me3=2, H3K36me3=2, antiRabbit=2),
-    `271`=c(H3K4me3=5, H3K27ac=3, H3K27me3=2, H3K36me3=2, antiRabbit=2)
+    `271`=c(H3K4me3=10, H3K27ac=3, H3K27me3=2, H3K36me3=2, antiRabbit=2)
 )
 
 # Pre-work.
