@@ -53,3 +53,22 @@ We use a multi-resolution analysis with sliding windows to detect regions that a
 - BedGraph files can be generated using `run_bg.sh`.
 
 All scripts can be submitted via a SLURM job scheduler.
+
+## CUT&RUN
+
+### Aligning the seuqencing data
+
+Repeating the analysis again requires re-aligning the sequencing data yourself.
+Assuming you have already built a `subread` index for hg38:
+
+1. Enter `cutnrun/` and download all FASTQ files from ArrayExpress ([E-MTAB-7419](https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-7419)) into `fastq/`.
+2. Rename each FASTQ file to its original name (see `Comment[SUBMITTED_FILE_NAME]` in the SDRF file).
+3. Running `mapme.sh` aligns the Gzipped FASTQ files using the `subread` aligner.
+
+### Repeating the analysis
+
+Quality control reports can be generated with `run_qc.sh` and BedGraph files can be generated using `run_bg.sh`.
+All scripts can be submitted via a SLURM job scheduler.
+
+For each mark, we use a multi-resolution analysis as described for CHART-seq.
+Enter `cutnrun/analysis/<MARK>` for each mark of interest and call `propagate.sh` to perform the DE analyses and to consolidate the results.
