@@ -33,3 +33,23 @@ Also enter `genomes/annotation` and follow the instructions in the README to cre
 4. Enter `analysis/` and run `count_me.sh` to generate the `count_me.R` script, which counts the number of reads mapped to each gene.
 This yields `genic_counts.tsv` that can be used in place of the processed data for the DE analysis.
 
+## CHART-seq
+
+### Aligning the seuqencing data
+
+Repeating the analysis requires re-aligning the sequencing data yourself.
+Assuming you have already built a `subread` index for hg38:
+
+1. Enter `chartseq/` and download all FASTQ files from ArrayExpress ([E-MTAB-7418](https://www.ebi.ac.uk/arrayexpress/experiments/E-MTAB-7418)) into `fastq/`.
+2. Rename each FASTQ file to its original name (see `Comment[SUBMITTED_FILE_NAME]` in the SDRF file).
+3. Running `mapme.sh` aligns the Gzipped FASTQ files using the `subread` aligner.
+
+### Repeating the analysis
+
+We use a multi-resolution analysis with sliding windows to detect regions that are enriched in the antisense pulldown compared to the sense control:
+
+- Enter `chartseq/analysis` and run `propagate.sh` to perform the DE analyses and to consolidate the results.
+- Quality control reports can be generated with `run_qc.sh`.
+- BedGraph files can be generated using `run_bg.sh`.
+
+All scripts can be submitted via a SLURM job scheduler.
