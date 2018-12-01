@@ -74,6 +74,14 @@ All scripts can be submitted via a SLURM job scheduler.
 For each mark, we use a multi-resolution analysis to deteect regions that are differentially bound upon lncRNA depletion.
 Enter `cutnrun/analysis/<MARK>` for each mark of interest and call `propagate.sh` to perform the DB analyses and to consolidate the results.
 
+## Proteomics
+
+To reproduce the Poisson model analysis of the TMT data:
+
+1. Enter `proteomics/` and create a `data` subdirectory.
+2. Download raw proteomics data from [here](https://jmlab-gitlab.cruk.cam.ac.uk/publications/LncScreen2018-DataFiles) into `data` (preserve the subdirectory structure).
+2. Run `analysis.Rmd` to test for significant differences upon lncRNA depletion.
+
 ## Integrating 'omics modalities
 
 Once data from each modality has been analyzed, the results can be integrated across modalities using the various Rmarkdown files in `integration/`.
