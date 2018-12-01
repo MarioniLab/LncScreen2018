@@ -48,9 +48,10 @@ Assuming you have already built a `subread` index for hg38:
 
 We use a multi-resolution analysis with sliding windows to detect regions that are enriched in the antisense pulldown compared to the sense control:
 
-- Enter `chartseq/analysis` and run `propagate.sh` to perform the DE analyses and to consolidate the results.
+- Enter `chartseq/analysis` and run `propagate.sh` to perform the enrichment analyses and to consolidate the results.
 - Quality control reports can be generated with `run_qc.sh`.
 - BedGraph files can be generated using `run_bg.sh`.
+- The sequence complementary analysis can be performed using `sequences/tppp_check.R`.
 
 All scripts can be submitted via a SLURM job scheduler.
 
@@ -70,5 +71,19 @@ Assuming you have already built a `subread` index for hg38:
 Quality control reports can be generated with `run_qc.sh` and BedGraph files can be generated using `run_bg.sh`.
 All scripts can be submitted via a SLURM job scheduler.
 
-For each mark, we use a multi-resolution analysis as described for CHART-seq.
-Enter `cutnrun/analysis/<MARK>` for each mark of interest and call `propagate.sh` to perform the DE analyses and to consolidate the results.
+For each mark, we use a multi-resolution analysis to deteect regions that are differentially bound upon lncRNA depletion.
+Enter `cutnrun/analysis/<MARK>` for each mark of interest and call `propagate.sh` to perform the DB analyses and to consolidate the results.
+
+## Integrating 'omics modalities
+
+Once data from each modality has been analyzed, the results can be integrated across modalities using the various Rmarkdown files in `integration/`.
+This focuses only on integration of RNA-seq data with each other modality.
+For CUT&RUN, use `propagate.sh` to perform integration between RNA-seq and the DB results for each mark of interest.
+
+## Other analyses
+
+The `figures/` directory contains code required to reproduce some of the figures from available 'omics datasets.
+Most of these are coverage tracks and assume that BedGraph files are available for each dataset.
+The heatmap for RNA-seq data can also be regenerated.
+
+The `miscellaneous/` directory contains scripts to generate other figures, generally for publicly available datasets (GTEx, TCGA).
