@@ -2,7 +2,8 @@
 
 ## Overview
 
-This repository provides the code for the paper **TITLE YET TO BE DESCRIBED** by Stojic et al.
+This repository provides the code for the paper **A long noncoding RNA regulates microtubule behaviour during mitosis**
+by Stojic et al.
 
 ## RNA-seq
 
