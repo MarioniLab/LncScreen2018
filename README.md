@@ -117,7 +117,7 @@ This will take several hours on a high-performance computing cluster.
 Quality control reports can be generated with `run_qc.sh` and BedGraph files can be generated using `run_bg.sh`.
 All scripts can be submitted via a SLURM job scheduler and will take 15 to 30 minutes on a single node.
 
-For each mark, we use a multi-resolution analysis to deteect regions that are differentially bound upon lncRNA depletion.
+For each mark, we use a multi-resolution analysis to detect regions that are differentially bound upon lncRNA depletion.
 Enter `cutnrun/analysis/<MARK>` for each mark of interest and call `propagate.sh` to perform the DB analyses and to consolidate the results.
 
 ## Proteomics
